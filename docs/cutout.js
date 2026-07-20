@@ -8,7 +8,7 @@ import * as ort from "./vendor/ort.all.min.mjs";
 import {
   MODEL_SIZE, normalizeImage, minMaxNormalize, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
-} from "./cutout-core.js?v=1.3.0";
+} from "./cutout-core.js?v=1.3.1";
 
 const MODEL_URL = "./models/isnet-int8.onnx";
 const MODEL_CACHE = "bouncer-model-1";
