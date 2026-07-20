@@ -121,6 +121,21 @@ export function crispen(m, k) {
   return out;
 }
 
+// Trim the faint outer ring where a light background bled into the edge pixels
+// and left a pale halo. It multiplies alpha by a ramp that is 0 below t and 1
+// above 2t, so the barely-there fringe drops to nothing while the solid subject
+// and genuine soft edges (anything already past the ramp) are untouched.
+export function defringe(m, t) {
+  const out = new Float32Array(m.length);
+  const lo = t, hi = 2 * t, span = hi - lo || 1;
+  for (let i = 0; i < m.length; i++) {
+    const v = m[i];
+    const g = v <= lo ? 0 : v >= hi ? 1 : (v - lo) / span;
+    out[i] = v * (g * g * (3 - 2 * g)); // smoothstep gate
+  }
+  return out;
+}
+
 // The working size for the refinement pass: big enough that hair detail
 // survives, capped so an 8K photo cannot stall the page.
 export function refineSize(w, h, cap = 2048) {
@@ -143,6 +158,37 @@ export function outputSize(w, h, maxArea = 16000000) {
   const scale = Math.sqrt(maxArea / (w * h));
   // Floor, not round, so the capped area is always at or under the ceiling.
   return { w: Math.max(1, Math.floor(w * scale)), h: Math.max(1, Math.floor(h * scale)), scale };
+}
+
+// Remove the old background's color from the half-transparent edge pixels. Each
+// edge pixel is a mix C = a·F + (1−a)·B of the true foreground F and the
+// background B it sat against; carrying that mix onto a new background leaves a
+// colored halo (a bright ring on the misty photo, a brown one on the wood).
+// With B estimated as the mean of the fully-removed pixels, F = (C − (1−a)·B)/a
+// recovers the clean edge color. Only the transition band is touched; solid
+// interior and near-clear pixels are left alone.
+export function decontaminate(rgba, matte, n, bg) {
+  for (let i = 0; i < n; i++) {
+    const a = matte[i];
+    if (a <= 0.1 || a >= 0.95) continue;
+    const j = i * 4;
+    for (let ch = 0; ch < 3; ch++) {
+      const f = (rgba[j + ch] - (1 - a) * bg[ch]) / a;
+      rgba[j + ch] = f < 0 ? 0 : f > 255 ? 255 : f;
+    }
+  }
+  return rgba;
+}
+
+// The mean color of the fully-removed background, the B in the unmix above.
+export function backgroundColor(rgba, matte, n) {
+  let r = 0, g = 0, b = 0, c = 0;
+  for (let i = 0; i < n; i++) {
+    if (matte[i] > 0.05) continue;
+    const j = i * 4;
+    r += rgba[j]; g += rgba[j + 1]; b += rgba[j + 2]; c++;
+  }
+  return c ? [r / c, g / c, b / c] : [255, 255, 255];
 }
 
 // Writes the alpha plane into an RGBA buffer in place.

@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.0] - 2026-07-20
+
+### Changed
+
+- Cleaner edges. The cutout used to carry a faint halo of the old background's color, a pale ring on a bright scene, a brown one on wood, which showed when you dropped it on a different background. The edge pixels are now un-mixed to recover their true color, and the faintest fringe is trimmed, so the subject sits cleanly on any backdrop.
+
+### Added
+
+- A note in the FAQ: a premium version with tap-to-select objects is coming to JaydenART.com.
+
 ## [1.2.1] - 2026-07-20
 
 ### Fixed

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   MODEL_SIZE, normalizeImage, minMaxNormalize, boxBlur, guidedFilter,
-  luminance, crispen, refineSize, outputSize, applyAlpha,
+  luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
 } from "../docs/cutout-core.js";
 
 /* ---- the reference implementations these must match ---- */
@@ -171,6 +171,33 @@ test("outputSize passes normal photos through and caps huge ones under the canva
   // a giant square never exceeds the ceiling on either axis
   const sq = outputSize(10000, 10000);
   assert.ok(sq.w * sq.h <= 16000000 && sq.w >= 1 && sq.h >= 1);
+});
+
+test("defringe drops the faint ring but keeps solid and true-soft pixels", () => {
+  const out = defringe(new Float32Array([0, 0.1, 0.3, 0.6, 1]), 0.2);
+  assert.equal(out[0], 0);              // clear stays clear
+  assert.equal(out[1], 0);              // below t: gone
+  assert.ok(out[2] < 0.3 && out[2] > 0); // in the ramp: reduced, not killed
+  assert.ok(Math.abs(out[3] - 0.6) < 1e-6); // above 2t: untouched
+  assert.equal(out[4], 1);              // solid stays solid
+});
+
+test("backgroundColor averages only the removed pixels", () => {
+  // two background pixels (matte 0) red+blue, one foreground (matte 1) green
+  const rgba = new Uint8ClampedArray([255, 0, 0, 255, 0, 0, 255, 255, 0, 255, 0, 255]);
+  const matte = new Float32Array([0, 0, 1]);
+  const bg = backgroundColor(rgba, matte, 3);
+  assert.deepEqual(bg.map(Math.round), [128, 0, 128]); // mean of red and blue
+});
+
+test("decontaminate unmixes the background color out of an edge pixel", () => {
+  // an edge pixel at alpha 0.5 that is a 50/50 mix of green foreground and
+  // white background should recover close to pure green.
+  const F = [0, 200, 0], B = [255, 255, 255], a = 0.5;
+  const mixed = F.map((f, i) => a * f + (1 - a) * B[i]);
+  const rgba = new Uint8ClampedArray([...mixed, 255]);
+  decontaminate(rgba, new Float32Array([a]), 1, B);
+  assert.ok(Math.abs(rgba[0] - 0) < 2 && Math.abs(rgba[1] - 200) < 2 && Math.abs(rgba[2] - 0) < 2);
 });
 
 test("applyAlpha writes only the alpha channel", () => {

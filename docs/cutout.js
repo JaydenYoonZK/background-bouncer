@@ -7,8 +7,8 @@
 import * as ort from "./vendor/ort.all.min.mjs";
 import {
   MODEL_SIZE, normalizeImage, minMaxNormalize, guidedFilter,
-  luminance, crispen, refineSize, outputSize, applyAlpha,
-} from "./cutout-core.js?v=1.2.1";
+  luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
+} from "./cutout-core.js?v=1.3.0";
 
 const MODEL_URL = "./models/isnet-int8.onnx";
 const MODEL_CACHE = "bouncer-model-1";
@@ -151,7 +151,7 @@ export async function removeBackground(source, { width, height }, onProgress) {
   const workRgba = workCtx.getImageData(0, 0, rs.w, rs.h).data;
   const guide = luminance(workRgba, rs.w * rs.h);
   const refined = guidedFilter(guide, matteWork, rs.w, rs.h, 8, 1e-4);
-  const crisp = crispen(refined, 0.35);
+  const crisp = defringe(crispen(refined, 0.35), 0.22);
   onProgress?.("refine", 1);
 
   onProgress?.("encode", 0);
@@ -163,7 +163,11 @@ export async function removeBackground(source, { width, height }, onProgress) {
   const { canvas: outCanvas, ctx: outCtx } = drawToCanvas(source, outW, outH, "display-p3");
   const space = outputColorSpace(outCtx);
   const outImage = outCtx.getImageData(0, 0, outW, outH, { colorSpace: space });
-  applyAlpha(outImage.data, matteFull, outW * outH);
+  const n = outW * outH;
+  // Unmix the old background's color out of the edge pixels before writing
+  // alpha, so the cutout carries no colored halo onto a new background.
+  decontaminate(outImage.data, matteFull, n, backgroundColor(outImage.data, matteFull, n));
+  applyAlpha(outImage.data, matteFull, n);
   outCtx.putImageData(outImage, 0, 0);
   const blob = await new Promise((resolve, reject) => {
     outCanvas.toBlob((b) => (b ? resolve(b) : reject(new Error("PNG encoding failed."))), "image/png");
