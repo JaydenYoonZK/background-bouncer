@@ -60,6 +60,12 @@ test("the model and runtime files are in place and under GitHub's limit", () => 
   assert.ok(size > 10 * 1024 * 1024, "model looks complete");
 });
 
+test("MODEL_BYTES matches the actual model file", () => {
+  const declared = +cutout.match(/const MODEL_BYTES = (\d+);/)[1];
+  const actual = readFileSync(join(root, "docs/models/isnet-int8.onnx")).length;
+  assert.equal(declared, actual, "MODEL_BYTES must equal the model's on-disk size for honest progress");
+});
+
 test("no development scaffolding is left in docs", () => {
   for (const f of ["docs/spike.html", "docs/spike2.html", "docs/memprobe.html", "docs/engine-test.html"]) {
     assert.ok(!existsSync(join(root, f)), `${f} should not ship`);

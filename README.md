@@ -8,7 +8,7 @@ Drop in a photo and a neural network lifts the subject out: hair, fur, whiskers 
 
 ## ✨ What it does
 
-- 🧠 **Finds the subject with a neural network.** ISNet, the salient-object segmentation model from the [Dichotomous Image Segmentation](https://github.com/xuebinqin/DIS) research (also offered by the popular `rembg` tool), compressed to 44 MB so a browser can run it.
+- 🧠 **Finds the subject with a neural network.** ISNet, the salient-object segmentation model from the [Dichotomous Image Segmentation](https://github.com/xuebinqin/DIS) research (also offered by the popular `rembg` tool), compressed small enough for a browser to run it.
 - 🪮 **Keeps the fine edges.** A guided filter re-cuts the mask against the full-resolution photo, so single hairs and whiskers survive even though the model works on a 1024-pixel canvas.
 - 🔍 **Before and after wipe.** Drag a handle to compare the original with the cutout, on a checkerboard or any background color you like.
 - 💾 **Transparent PNG out.** One button, full resolution, real alpha.

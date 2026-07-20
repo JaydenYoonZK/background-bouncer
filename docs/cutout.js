@@ -2,7 +2,7 @@
 
 // The engine: loads the segmentation model once, then turns any image into a
 // transparent PNG. Heavy math lives in cutout-core.js; the model file is
-// cached in the Cache API so the 44 MB download happens once per version.
+// cached in the Cache API so the ~30 MB download happens once per version.
 
 import * as ort from "./vendor/ort.all.min.mjs";
 import {
@@ -12,6 +12,11 @@ import {
 
 const MODEL_URL = "./models/isnet-int8.onnx";
 const MODEL_CACHE = "bgb-model-1";
+// The model's decompressed byte length. GitHub Pages gzips it on the wire, so
+// the Content-Length header is the compressed size (~30 MB) while the reader
+// yields the full decompressed stream; dividing progress by this constant
+// keeps the bar from overshooting. Kept in sync with the file by a site test.
+const MODEL_BYTES = 46360717;
 
 // Single-threaded on purpose: GitHub Pages cannot send the isolation headers
 // that multi-threaded wasm needs. The proxy worker keeps the page responsive
@@ -35,7 +40,6 @@ async function fetchModelBytes(onProgress) {
   } catch { /* private mode may block Cache API; download instead */ }
   const res = await fetch(MODEL_URL);
   if (!res.ok) throw new Error("The model could not be downloaded (HTTP " + res.status + ").");
-  const total = +res.headers.get("Content-Length") || 0;
   const reader = res.body.getReader();
   const chunks = [];
   let got = 0;
@@ -44,7 +48,9 @@ async function fetchModelBytes(onProgress) {
     if (done) break;
     chunks.push(value);
     got += value.length;
-    if (total) onProgress?.("download", got / total);
+    // Progress against the decompressed size, clamped: the reader yields
+    // decompressed bytes but the header's Content-Length is the gzipped size.
+    onProgress?.("download", Math.min(1, got / MODEL_BYTES));
   }
   const bytes = new Uint8Array(got);
   let o = 0;

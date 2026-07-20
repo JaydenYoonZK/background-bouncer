@@ -133,7 +133,7 @@
       <h1>The background never deserved you anyway.</h1>
       <p class="lede">Drop in a photo and a neural network lifts the subject out: hair, fur, whiskers and all. What comes back is a clean transparent PNG, ready for a new backdrop, a thumbnail, or a sticker.</p>
       <p class="lede lede-kick">No uploads. No accounts. The magic happens on your device. 🪄</p>
-      <p class="privacy"><span class="privacy-lock" aria-hidden="true">🔒</span><span>Runs entirely in your browser. Your photo is never uploaded or stored: no requests, no analytics. The model downloads once (44&nbsp;MB) and works offline after that.</span></p>
+      <p class="privacy"><span class="privacy-lock" aria-hidden="true">🔒</span><span>Runs entirely in your browser. Your photo is never uploaded or stored: no requests, no analytics. The model downloads once (about 30&nbsp;MB) and works offline after that.</span></p>
     </div>
     <div class="hero-art" aria-hidden="true">
       <svg viewBox="0 0 320 272" xmlns="http://www.w3.org/2000/svg" fill="none">
@@ -193,7 +193,7 @@
         <button id="upload" class="primary" type="button" aria-label="Upload a photo" data-tip="Pick a photo from your files">Upload a photo</button>
         <button id="sample" type="button" aria-label="Try the sample photo" data-tip="A black dog on a wooden floor: fur against wood grain">Try a sample</button>
       </div>
-      <p class="dropwell-note">JPG, PNG, or WebP. The first run downloads the 44&nbsp;MB model, then it is cached for offline use.</p>
+      <p class="dropwell-note">JPG, PNG, or WebP. The first run downloads the model (about 30&nbsp;MB), then it is cached for offline use.</p>
     </div>
     <div class="progress" id="progress" hidden>
       <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
@@ -231,7 +231,7 @@
   </div>
 
   <h2 class="section-title" id="how"><span aria-hidden="true">🧠</span> How the vanishing works</h2>
-  <p>A photo does not say which pixels are the subject, so the tool asks a neural network. ISNet, the salient-object segmentation model from Xuebin Qin's <a class="doclink" href="https://github.com/xuebinqin/DIS" target="_blank" rel="noopener">Dichotomous Image Segmentation</a> research, looks at the whole picture and paints a probability map: this pixel is the dog, this pixel is the floor. It is one of the models the popular rembg tool ships, compressed to 44&nbsp;MB so a browser can hold it.</p>
+  <p>A photo does not say which pixels are the subject, so the tool asks a neural network. ISNet, the salient-object segmentation model from Xuebin Qin's <a class="doclink" href="https://github.com/xuebinqin/DIS" target="_blank" rel="noopener">Dichotomous Image Segmentation</a> research, looks at the whole picture and paints a probability map: this pixel is the dog, this pixel is the floor. It is one of the models the popular rembg tool ships, compressed small enough for a browser to hold.</p>
   <p>The raw map is good, but its edges are only as sharp as a 1024-pixel canvas allows. So a second pass runs: a guided filter reads the actual edges of your photo at full detail and re-attaches the mask to them, which is how single hairs and whiskers make it into the cutout. A final curve snaps the sure areas fully solid or fully clear, leaving softness only where the photo itself is soft.</p>
   <p>Everything runs on ONNX Runtime compiled to WebAssembly, in a worker, so the page stays responsive while the network thinks. A photo takes a few seconds on a modern laptop.</p>
 
@@ -256,7 +256,7 @@
     <div class="faq-item">
     <h3 class="faq-q"><button type="button" id="faq-b3" aria-expanded="false" aria-controls="faq-a3"><span>Why is the first run slow?</span><span class="faq-icon" aria-hidden="true"></span></button></h3>
     <div class="faq-a" id="faq-a3" role="region" aria-labelledby="faq-b3" hidden>
-      <div class="faq-a-inner"><p>The first run downloads the 44&nbsp;MB neural network. It goes into your browser's cache, so every run after that skips the download, works offline, and takes a few seconds: the time the network needs to look at your photo on your own processor.</p></div>
+      <div class="faq-a-inner"><p>The first run downloads the neural network (about 30&nbsp;MB). It goes into your browser's cache, so every run after that skips the download, works offline, and takes a few seconds: the time the network needs to look at your photo on your own processor.</p></div>
     </div>
     </div>
     <div class="faq-item">
