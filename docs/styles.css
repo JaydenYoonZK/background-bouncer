@@ -1,0 +1,1744 @@
+/*! Background Begone | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-begone */
+:root {
+  color-scheme: dark;
+  --bg: #0d0c0a;
+  --bg-raise: #14120f;
+  --panel: #191713;
+  --panel-2: #1f1c17;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --ink: #f3f0e9;
+  --ink-soft: #c8c2b6;
+  --ink-mute: #8f887c;
+  --accent: #abcf37;
+  --accent-soft: rgba(171, 207, 55, 0.14);
+  --sponsor: #ec6cb9;
+  --sponsor-soft: rgba(236, 108, 185, 0.12);
+  --sponsor-glow: rgba(236, 108, 185, 0.18);
+  --sponsor-line: rgba(236, 108, 185, 0.5);
+  --accent-ink: #101400;
+  --red: #ff7a6e;
+  --red-soft: rgba(255, 122, 110, 0.14);
+  --amber: #ffc65c;
+  --amber-soft: rgba(255, 198, 92, 0.13);
+  --blue: #7fb8ff;
+  --blue-soft: rgba(127, 184, 255, 0.13);
+  --green: #a7e26a;
+  --green-soft: rgba(167, 226, 106, 0.14);
+  --btn-edge: #3b352b;
+  --btn-edge-primary: #7e9c26;
+  --btn-ambient: rgba(0, 0, 0, 0.26);
+  --btn-glow: rgba(171, 207, 55, 0.22);
+  --sb-rail: rgba(171, 207, 55, 0.16);
+  --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 24px rgba(0, 0, 0, 0.32);
+  --fab-shadow: 0 3px 8px rgba(0, 0, 0, 0.35), 0 10px 24px rgba(171, 207, 55, 0.2);
+  --fab-shadow-hover: 0 5px 12px rgba(0, 0, 0, 0.3), 0 14px 30px rgba(171, 207, 55, 0.35);
+  --fab-shadow-active: 0 2px 5px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(171, 207, 55, 0.22);
+  --radius: 18px;
+  --radius-lg: 26px;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  background-image: radial-gradient(1100px 500px at 15% -5%, rgba(171, 207, 55, 0.07), transparent 60%);
+  /* One glow only: on a short page like the 404, the canvas would tile
+     the body background below it and paint a hard-edged second glow. */
+  background-repeat: no-repeat;
+  color: var(--ink);
+  font-family: var(--font);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  width: min(920px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Header */
+header { padding: 72px 0 40px; }
+
+.eyebrow {
+  margin: 0 0 14px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  max-width: 15ch;
+  font-size: clamp(2.1rem, 6vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  max-width: 58ch;
+  margin: 20px 0 0;
+  color: var(--ink-soft);
+}
+
+/* The punchline sits close under the lede instead of a full paragraph away. */
+.lede-kick {
+  margin-top: 10px;
+  font-weight: 600;
+  font-size: 1.08rem;
+}
+
+.privacy {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 22px;
+  padding: 8px 16px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(171, 207, 55, 0.3);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+
+/* Cards */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  box-shadow: var(--card-shadow);
+}
+
+/* Input */
+textarea {
+  width: 100%;
+  min-height: 190px;
+  padding: 18px;
+  background: var(--bg-raise);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+textarea:focus { outline: none; border-color: rgba(171, 207, 55, 0.5); }
+textarea::placeholder { color: var(--ink-mute); }
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+button {
+  font-family: var(--font);
+  font-size: 0.92rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 10px 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s, background 0.2s, border-color 0.2s;
+  /* A physical key: hard edge below, soft ambient, hairline top bevel. */
+  box-shadow: 0 5px 0 var(--btn-edge), 0 7px 5px var(--btn-ambient), inset 0 1.5px 0 rgba(255, 255, 255, 0.09);
+}
+
+@media (hover: hover) {
+button:hover {
+  border-color: rgba(171, 207, 55, 0.45);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 0 var(--btn-edge), 0 8px 6px var(--btn-ambient), inset 0 1.5px 0 rgba(255, 255, 255, 0.12);
+}
+}
+/* The press: the cap sinks into its socket. The dark edge below stays put
+   while the face travels down, and the socket shades the top of the cap. */
+button:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--btn-edge), 0 4px 4px var(--btn-ambient), inset 0 2px 6px 1px rgba(0, 0, 0, 0.25), inset 0 1.5px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Disabled: visibly inert. Muted, dashed edge, no pointer, no hover response. */
+button:disabled,
+button:disabled:hover,
+button.primary:disabled,
+button.primary:disabled:hover {
+  /* Dim with muted tokens, not opacity: opacity would also fade the tooltip,
+     which must stay fully readable (it explains WHY the button is disabled). */
+  cursor: not-allowed;
+  background: var(--panel-2);
+  border-color: var(--line);
+  border-style: dashed;
+  color: var(--ink-mute);
+  /* Sink into the socket like a pressed key: the face drops onto a short base
+     edge so its bottom lands on the same base line as the raised keys beside
+     it, reading as locked and pressed in rather than floating flat. */
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--btn-edge), 0 4px 4px var(--btn-ambient), inset 0 2px 4px rgba(0, 0, 0, 0.22), inset 0 1.5px 0 rgba(255, 255, 255, 0.06);
+}
+button.primary:disabled,
+button.primary:disabled:hover {
+  background: transparent;
+  color: var(--ink-mute);
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 5px 0 var(--btn-edge-primary), 0 7px 5px var(--btn-ambient), 0 3px 10px var(--btn-glow), inset 0 1.5px 0 rgba(255, 255, 255, 0.28);
+}
+
+@media (hover: hover) {
+button.primary:hover {
+  background: #bcdf4e;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 0 var(--btn-edge-primary), 0 8px 6px var(--btn-ambient), 0 4px 14px var(--btn-glow), inset 0 1.5px 0 rgba(255, 255, 255, 0.32);
+}
+}
+button.primary:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--btn-edge-primary), 0 4px 4px var(--btn-ambient), 0 2px 8px var(--btn-glow), inset 0 2px 6px 1px rgba(0, 0, 0, 0.28), inset 0 1.5px 0 rgba(255, 255, 255, 0.12);
+}
+
+.spacer { flex: 1; }
+
+.charcount { color: var(--ink-mute); font-size: 0.85rem; }
+
+/* Stats */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 26px 0 0;
+}
+
+.chip {
+  display: inline-flex;
+  /* Each chip grows to close its row, so the strip meets both edges
+     instead of ending ragged before the wrap. */
+  flex: 1 1 auto;
+  justify-content: center;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.chip strong { font-size: 1.05rem; color: var(--ink); }
+.chip.green strong { color: var(--green); }
+.chip.amber strong { color: var(--amber); }
+.chip.blue strong { color: var(--blue); }
+.chip.red strong { color: var(--red); }
+.chip.ok { border-color: rgba(171, 207, 55, 0.35); }
+
+/* Hidden message alert */
+.alert {
+  overflow-wrap: anywhere;
+  margin-top: 18px;
+  padding: 16px 20px;
+  background: var(--red-soft);
+  border: 1px solid rgba(255, 122, 110, 0.4);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+}
+
+.alert code {
+  font-family: var(--mono);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+/* In light mode a 35% black wash over the pink alert reads as dead grey.
+   The chip becomes a crisp near-white card with a hairline red keyline. */
+html[data-theme="light"] .alert code {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(192, 36, 24, 0.25);
+}
+
+/* Theme switching crossfades the whole page as one composited snapshot via
+   the View Transitions API, so text cannot re-ease its inherited color and
+   rubber-band behind the page. The toggle renders live so the sun and moon
+   morph keeps its own spring timing. The browser's default crossfade blends
+   both snapshots with plus-lighter inside an isolated group, two full-screen
+   passes that stutter on phone GPUs, so instead the new page sits fully
+   opaque below while the old snapshot fades out above it. On an opaque page
+   that reads identically and costs one alpha layer. */
+/* The crossfade overlay eats pointer input by default, deadening hovers and
+   tooltips for half a second after every toggle click. The live page below
+   stays interactive instead. */
+::view-transition { pointer-events: none; }
+::view-transition-image-pair(root) { isolation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { mix-blend-mode: normal; }
+::view-transition-new(root) { animation: none; }
+::view-transition-old(root) { animation-duration: 0.45s; z-index: 1; }
+/* Decorative drift animations pause while the crossfade runs. Phone GPUs
+   need the headroom, and freezing a slow drift for half a second is
+   invisible. Transitions are unaffected, so the toggle morph still plays. */
+html.vt-active * { animation-play-state: paused !important; }
+
+/* iOS and Android flash their default grey tap rectangle over touched
+   controls. The design supplies its own pressed states, so the system
+   flash only reads as a glitch. Keyboard focus outlines are unaffected. */
+html { -webkit-tap-highlight-color: transparent; }
+
+/* Keyboard users can jump straight past the navigation. The link waits off
+   screen and drops in as a chartreuse key when it receives focus. */
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  /* Resting, the link sits under the nav's overscroll bleed; focus lifts
+     it above everything. */
+  z-index: 1;
+  transform: translateY(-250%);
+  background: #abcf37;
+  color: #101400;
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 10px 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 5px 0 #7e9c26, 0 7px 5px rgba(0, 0, 0, 0.26);
+}
+.skip-link:focus {
+  z-index: 2200; transform: translateY(0); }
+main:focus { outline: none; }
+
+/* 404 page. The link back home is a chartreuse key with the same anchored
+   physics as the buttons: the press is declared after the hover lift so it
+   wins while hovered, and hover styling stays off touch screens. */
+.error-wrap { min-height: 76vh; display: grid; align-content: center; justify-items: start; gap: 6px; padding-top: 48px; padding-bottom: 48px; }
+.error-wrap h1 { margin: 6px 0 2px; }
+.error-wrap .lede { margin: 6px 0 14px; }
+.key-link {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  padding: 12px 22px;
+  border-radius: 999px;
+  text-decoration: none;
+  margin: 4px 0 34px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  box-shadow: 0 5px 0 var(--btn-edge-primary), 0 7px 5px var(--btn-ambient), inset 0 1.5px 0 rgba(255, 255, 255, 0.28);
+}
+@media (hover: hover) {
+  .key-link:hover { transform: translateY(-1px); box-shadow: 0 6px 0 var(--btn-edge-primary), 0 8px 6px var(--btn-ambient), inset 0 1.5px 0 rgba(255, 255, 255, 0.32); }
+}
+.key-link:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--btn-edge-primary), 0 4px 4px var(--btn-ambient), inset 0 2px 6px 1px rgba(0, 0, 0, 0.28); }
+/* In light mode --accent is the deep text green; the key wears the brand
+   chartreuse instead, exactly like the primary buttons. */
+/* Keys and tool cards are buttons, not prose links: the global a:hover
+   underline stays off them in every state. */
+.key-link:hover, .key-link:focus, .key-link:active,
+.tool-grid a:hover, .tool-grid a:focus, .tool-grid a:active { text-decoration: none; }
+html[data-theme="light"] .key-link { background: #abcf37; color: #101400; }
+@media (hover: hover) {
+  html[data-theme="light"] .key-link:hover { background: #bcdf4e; }
+}
+.error-hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 44px; align-items: center; width: 100%; }
+@media (max-width: 760px) { .error-hero { grid-template-columns: 1fr; } }
+.error-tools { margin-top: 8px; width: 100%; }
+.error-tools p { color: var(--ink-mute); font-size: 0.9rem; margin: 0 0 10px; }
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; width: 100%; }
+.tool-grid a {
+  display: block;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.92rem;
+  text-decoration: none;
+}
+.tool-grid a small { display: block; color: var(--ink-mute); font-weight: 400; margin-top: 2px; }
+@media (hover: hover) {
+  .tool-grid a:hover { border-color: rgba(171, 207, 55, 0.45); background: var(--panel-2); }
+}
+
+/* Selected text wears the brand: the chartreuse-with-dark-ink pairing the
+   primary buttons use, identical in both themes. The 0.99 alpha keeps
+   Chrome from swapping an opaque selection color for its own translucent
+   default. */
+::selection { background: rgba(171, 207, 55, 0.99); color: #101400; }
+
+/* Scrollbars carry the brand. Inside rounded boxes such as text areas the
+   scrollbar strip stays rectangular, so a glow, rail, or resizer grip there
+   reads as a box poking through the corner radius; inner scrollables get a
+   quiet chartreuse pill instead, and the full glowing treatment lives only
+   on the page scrollbar, whose corners really are square. Every state
+   re-declares background-clip because the background shorthand resets it.
+   The standard properties stay behind the @supports guard for Firefox only,
+   because Chrome drops the styled pseudo-elements when scrollbar-color is
+   set. */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-corner { background: transparent; }
+/* The resize corner keeps its affordance: two diagonal grip lines in brand
+   green floating on a transparent square, so the rounded corner stays clean
+   while the handle stays discoverable. */
+::-webkit-resizer { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cg stroke='%23abcf37' stroke-opacity='0.8' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M3.2 10 10 3.2'/%3E%3Cpath d='M7 10 10 7'/%3E%3C/g%3E%3C/svg%3E") center / 10px 10px no-repeat; }
+html[data-theme="light"] ::-webkit-resizer { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cg stroke='%237e9c26' stroke-opacity='0.85' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M3.2 10 10 3.2'/%3E%3Cpath d='M7 10 10 7'/%3E%3C/g%3E%3C/svg%3E") center / 10px 10px no-repeat; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #d7ef7a, #abcf37 45%, #7e9c26);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  min-height: 32px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #e4f79a, #bcdf4e 45%, #8fb527);
+  background-clip: padding-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #f1ffbe, #d7ef7a 45%, #abcf37);
+  background-clip: padding-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #bcdf4e, #abcf37 45%, #85a428);
+  background-clip: padding-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #cdea62, #bcdf4e 45%, #8fb527);
+  background-clip: padding-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+html[data-theme="light"] ::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #e4f79a, #cdea62 45%, #abcf37);
+  background-clip: padding-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+html::-webkit-scrollbar { width: 14px; height: 14px; }
+html::-webkit-scrollbar-track {
+  background: linear-gradient(to right, transparent calc(50% - 1px), var(--sb-rail) calc(50% - 1px), var(--sb-rail) calc(50% + 1px), transparent calc(50% + 1px));
+}
+html::-webkit-scrollbar-track:horizontal {
+  background: linear-gradient(to bottom, transparent calc(50% - 1px), var(--sb-rail) calc(50% - 1px), var(--sb-rail) calc(50% + 1px), transparent calc(50% + 1px));
+}
+html::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #d7ef7a, #abcf37 45%, #7e9c26);
+  background-clip: padding-box;
+  border: 4px solid transparent;
+  border-radius: 999px;
+  min-height: 44px;
+  box-shadow: 0 0 8px rgba(171, 207, 55, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+html::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #e4f79a, #bcdf4e 45%, #8fb527);
+  background-clip: padding-box;
+  border-width: 3px;
+  box-shadow: 0 0 12px rgba(171, 207, 55, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+html::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #f1ffbe, #d7ef7a 45%, #abcf37);
+  background-clip: padding-box;
+  border-width: 3px;
+  box-shadow: 0 0 16px rgba(171, 207, 55, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+html[data-theme="light"]::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #bcdf4e, #abcf37 45%, #85a428);
+  background-clip: padding-box;
+  box-shadow: 0 0 8px rgba(171, 207, 55, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+html[data-theme="light"]::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #cdea62, #bcdf4e 45%, #8fb527);
+  background-clip: padding-box;
+  box-shadow: 0 0 12px rgba(171, 207, 55, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+html[data-theme="light"]::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #e4f79a, #cdea62 45%, #abcf37);
+  background-clip: padding-box;
+  box-shadow: 0 0 16px rgba(171, 207, 55, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-color: #abcf37 transparent; }
+}
+
+/* Film grain over the whole composition. Large soft gradients band on most
+   displays; a whisper of static monochrome noise dithers the steps away and
+   gives the surface a print-like tooth. One tiled texture, no blend mode,
+   no animation, so phones composite it for free. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+  /* A raster tile, not SVG turbulence: WebKit does not apply SVG filters
+     when the SVG is rasterized as a CSS image, so on iPhone the old tile
+     painted a plain dark veil with no noise at all. Plain pixels render
+     identically everywhere and keep the grain crisp. */
+  background-image: url("data:image/png;base64,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");
+  /* Half-size rendering makes each grain dot half as large: one device pixel
+     on 2x screens. Finer grain dithers banding better per unit of opacity,
+     so the veil can stay lighter. */
+  background-size: 64px 64px;
+  image-rendering: pixelated; /* high-density screens rescale the tile; smoothing would blur the grain into mush */
+  opacity: 0.054;
+}
+html[data-theme="light"] body::after { opacity: 0.043; }
+@media print { body::after { display: none; } }
+.theme-toggle { view-transition-name: theme-toggle; }
+::view-transition-old(theme-toggle) { animation: none; opacity: 0; }
+::view-transition-new(theme-toggle) { animation: none; opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
+/* Fallback fade for browsers without view transitions: non-inherited color
+   properties only. Text switches in one clean step instead of lagging. */
+html.theme-fading, html.theme-fading body,
+html.theme-fading :where(*:not(.theme-toggle):not(.theme-toggle *)),
+html.theme-fading :where(*:not(.theme-toggle):not(.theme-toggle *))::before,
+html.theme-fading :where(*:not(.theme-toggle):not(.theme-toggle *))::after {
+  transition-property: background-color, border-color, box-shadow !important;
+  transition-duration: 0.45s !important;
+  transition-timing-function: ease !important;
+}
+
+/* Neutral variant: a capacity note, not a warning. */
+.alert.info {
+  background: var(--panel-2);
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+/* Output */
+.output {
+  position: relative;
+  margin-top: 16px;
+}
+
+.output textarea { min-height: 150px; background: var(--panel); }
+
+/* The output actions ride their own row, right-aligned and clear of the code
+   instead of floating over it. Where a section title sits directly above the
+   output, that row carries the title on the left and the actions on the right;
+   otherwise it is just the right-aligned actions above the code. */
+.output-head { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 40px 0 12px; }
+.output-head .section-title { margin: 0; }
+.output .output-head { margin: 0 0 10px; }
+.copy-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+
+/* Prose sections */
+.prose { padding: 40px 0 20px; }
+.prose > h2:first-child { margin-top: 0; }
+.prose h2 {
+  margin: 52px 0 14px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+.prose h3 { margin: 30px 0 8px; font-size: 1.08rem; font-weight: 750; }
+.prose p, .prose li { color: var(--ink-soft); max-width: 68ch; }
+.prose code {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  padding: 1px 7px;
+  border-radius: 6px;
+}
+/* FAQ accordions: full-width cards, a plus that turns into a close mark,
+   and answers that unfold by animating the grid row they sit in. */
+.faq { display: grid; gap: 10px; margin-top: 24px; }
+.faq-item {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition: border-color 0.25s ease;
+}
+.faq-item:hover, .faq-item.open { border-color: rgba(171, 207, 55, 0.45); }
+.faq h3.faq-q { margin: 0; font-size: 1.02rem; }
+/* The row opts out of the suite's 3D key styling: it is a disclosure,
+   not a key, so it must not lift, press, or cast the key shadow. */
+.faq-q button {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  padding: 16px 20px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.faq-q button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 14px;
+}
+.faq-icon {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, background 0.25s ease;
+}
+.faq-icon::before, .faq-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: currentColor;
+  border-radius: 2px;
+}
+.faq-icon::before { width: 12px; height: 2px; transform: translate(-50%, -50%); }
+.faq-icon::after { width: 2px; height: 12px; transform: translate(-50%, -50%); }
+.faq-item.open .faq-icon {
+  transform: rotate(45deg);
+  border-color: rgba(171, 207, 55, 0.55);
+  background: var(--accent-soft);
+}
+/* Unfolding trick: a grid row animates from 0fr to 1fr, which is the
+   only widely supported way to animate to an auto height. Visibility
+   waits for the collapse to finish, so closed answers stay out of the
+   accessibility tree. */
+.faq-a {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 0.34s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s 0.34s;
+}
+.faq-item.open .faq-a {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: grid-template-rows 0.34s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.faq-a-inner { overflow: hidden; min-height: 0; }
+.faq-a-inner p { margin: 0; padding: 2px 20px 18px; max-width: none; color: var(--ink-soft); }
+@media (prefers-reduced-motion: reduce) {
+  .faq-a, .faq-item.open .faq-a, .faq-icon { transition: none; }
+}
+
+/* Blocks tagged full-measure run the whole section width, matching the
+   tables and grids around them. */
+.prose .full-measure { max-width: none; }
+
+/* The kept list flows in two balanced columns from tablet width up,
+   closing the section to full width. */
+.kept-columns { columns: 2; column-gap: 48px; }
+.kept-columns li { break-inside: avoid; }
+@media (max-width: 700px) { .kept-columns { columns: 1; } }
+
+/* The two deep-dive notes share a row, closing the section to the same
+   full width as the table above them. */
+.finds-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 48px;
+  align-items: start;
+}
+/* Long links and code spans must wrap inside their column instead of
+   dragging the second column off the screen edge. */
+.finds-grid > div { min-width: 0; }
+@media (max-width: 700px) {
+  .finds-grid { grid-template-columns: 1fr; }
+}
+
+/* The opening explainer pairs its text with a small scene, so the right
+   side of the column carries weight instead of trailing off empty. */
+.why-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px 48px;
+  align-items: center;
+}
+.why-split .why-art { width: 100%; height: auto; }
+/* Scene boxes hug their drawing (trimmed viewBox), so centering the box
+   against the text centers the drawing's visual mass too. The sprout is
+   portrait, so it takes a narrower width to keep its size in proportion. */
+.why-split .art-sprout { width: min(100%, 212px); justify-self: center; }
+/* The story's sprout takes its height from the text: it reaches from just
+   above the paragraph down to exactly its last line, so no empty band opens
+   under the text however long or short it runs. Absolute positioning keeps
+   the drawing out of the row-height math; the grid column stays reserved. */
+.story-split { position: relative; align-items: start; }
+.story-split .art-sprout {
+  position: absolute;
+  top: -34px;
+  right: 40px;
+  height: calc(100% + 34px);
+  width: auto;
+}
+@media (max-width: 900px) {
+  .why-split { grid-template-columns: 1fr; }
+  .why-split .why-art { display: none; }
+  /* With the scene gone, the text takes the full width like the
+     sections around it. */
+  .why-split p { max-width: none; }
+}
+
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 18px 0;
+  font-size: 0.92rem;
+}
+.prose th, .prose td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  vertical-align: top;
+}
+.prose th { color: var(--ink); font-weight: 700; }
+.prose td code { white-space: nowrap; }
+
+/* Footer */
+footer {
+  margin-top: 70px;
+  padding: 34px 0 46px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-mute);
+  font-size: 0.9rem;
+}
+
+footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: center; text-align: center; }
+
+/* The legal line closes the page quietly: its own hairline, a size down
+   and a shade fainter than the footer links, so it reads as a colophon
+   rather than another row of navigation. */
+footer .legal {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+}
+
+/* Small screens */
+@media (max-width: 560px) {
+  header { padding: 48px 0 30px; }
+  .card { padding: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+/* Header art */
+.header-grid { display: flex; align-items: center; justify-content: space-between; gap: 48px; }
+.header-copy { min-width: 0; }
+.hero-art { flex: 0 0 auto; width: 310px; max-width: 34vw; }
+.hero-art svg { width: 100%; height: auto; display: block; }
+@media (max-width: 760px) { .hero-art { display: none; } }
+
+/* Entrance motion */
+@keyframes fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+header .eyebrow { animation: fade-up 0.5s 0.05s ease both; }
+header h1 { animation: fade-up 0.55s 0.12s ease both; }
+header .lede { animation: fade-up 0.55s 0.2s ease both; }
+header .privacy { animation: fade-up 0.55s 0.28s ease both; }
+.hero-art { animation: fade-up 0.6s 0.24s ease both; }
+main > .card:first-of-type { animation: fade-up 0.55s 0.34s ease both; }
+.chip { animation: fade-up 0.3s ease backwards; }
+.chip:nth-child(2) { animation-delay: 0.05s; }
+.chip:nth-child(3) { animation-delay: 0.1s; }
+.chip:nth-child(4) { animation-delay: 0.15s; }
+.chip:nth-child(5) { animation-delay: 0.2s; }
+.chip:nth-child(6) { animation-delay: 0.25s; }
+
+/* Button and link feel. Hover styling lives behind (hover: hover): touch
+   browsers pin :hover to the last-tapped control, which left the theme
+   toggle stuck mid-twist after a tap. The press is declared after the
+   hover lift at the same specificity: during a click the pointer is still
+   hovering, so whichever rule loses here never shows. The press must win. */
+button, .to-top { touch-action: manipulation; } /* no double-tap zoom hesitation on controls */
+button { transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.2s, border-color 0.2s; }
+@media (hover: hover) {
+button:not(.primary):not(.to-top):not(:disabled):hover { background: var(--panel); }
+button:not(:disabled):hover { transform: translateY(-1px); }
+}
+button:not(:disabled):active { transform: translateY(3px); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.results-table tbody tr { transition: background 0.15s; }
+@media (hover: hover) {
+.results-table tbody tr:hover { background: rgba(255, 255, 255, 0.025); }
+}
+
+/* Screen-reader-only: present in the accessibility tree, hidden visually */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Scroll to top */
+.to-top {
+  position: fixed;
+  right: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--accent-ink);
+  font-size: 1.15rem;
+  z-index: 50;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 0.25s, transform 0.25s, box-shadow 0.2s, visibility 0s 0.25s;
+  box-shadow: var(--fab-shadow);
+  padding: 0;
+}
+.to-top.show {
+  visibility: visible;
+  transition-delay: 0s; opacity: 1; pointer-events: auto; transform: none; }
+@media (hover: hover) {
+.to-top:hover { transform: translateY(-3px); background: #bcdf4e; border-color: #bcdf4e; box-shadow: var(--fab-shadow-hover); }
+}
+.to-top:active { transform: translateY(1px); background: #9dbd2f; border-color: #9dbd2f; box-shadow: var(--fab-shadow-active); }
+
+@media (prefers-reduced-motion: reduce) {
+  header .eyebrow, header h1, header .lede, header .privacy,
+  .hero-art, main > .card:first-of-type, .chip { animation: none !important; }
+  button, .to-top { transition: none; }
+  button:hover, .to-top:hover, button:active, .to-top:active, button:not(:disabled):hover, button:not(:disabled):active { transform: none; }
+  button:active { box-shadow: 0 5px 0 var(--btn-edge), 0 7px 5px var(--btn-ambient), inset 0 2px 6px 1px rgba(0, 0, 0, 0.25), inset 0 1.5px 0 rgba(255, 255, 255, 0.06); }
+  button.primary:active { box-shadow: 0 5px 0 var(--btn-edge-primary), 0 7px 5px var(--btn-ambient), 0 3px 10px var(--btn-glow), inset 0 2px 6px 1px rgba(0, 0, 0, 0.28), inset 0 1.5px 0 rgba(255, 255, 255, 0.12); }
+  .tt-sun, .tt-moon { transition: none; }
+  .skip-link { transition: none; }
+}
+
+/* External reference links inside result rows carry a small open-in-new
+   icon, so "docs" reads as something that opens. Drawn as a mask so it
+   inherits the link color in both themes. */
+.doclink::after {
+  content: "";
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  margin-left: 4px;
+  vertical-align: -0.02em;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 4H20v5.5'/%3E%3Cpath d='M20 4 10.5 13.5'/%3E%3Cpath d='M17.5 13.5V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19V8a1.6 1.6 0 0 1 1.6-1.6h5.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 4H20v5.5'/%3E%3Cpath d='M20 4 10.5 13.5'/%3E%3Cpath d='M17.5 13.5V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19V8a1.6 1.6 0 0 1 1.6-1.6h5.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* On narrow screens tables restack as cards: cells flow inline within their
+   row, the last cell (the explanation) takes the full width, and header rows
+   disappear since the pills and labels speak for themselves. Nothing scrolls
+   sideways. */
+@media (max-width: 700px) {
+  .prose table, .results-table, .prose table tbody, .results-table tbody { display: block; }
+  .prose table thead, .results-table thead, .prose table tr:has(> th) { display: none; }
+  .prose table tr, .results-table tr { display: block; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .prose table td, .results-table td { display: inline-block; vertical-align: middle; border: none; padding: 2px 12px 2px 0; }
+  .prose table td:last-child, .results-table td:last-child { display: block; padding: 6px 0 0; }
+  .results-table td.bot, .results-table td.pkg { white-space: normal; }
+  .results-table td .detail { max-width: none; }
+  .table-scroll { overflow-x: visible; }
+  .table-scroll .results-table { min-width: 0; }
+  pre.snippet { white-space: pre-wrap; word-break: break-word; }
+}
+
+
+/* Sticky navigation */
+:root { --nav-bg: rgba(13, 12, 10, 0.9); --subnav-bg: rgba(255, 255, 255, 0.045); }
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: var(--nav-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+/* iOS elastic scrolling and the collapsing Safari chrome can expose a
+   strip above the bar mid-gesture, and desktop rubber-banding shows bare
+   page there. The bar bleeds its own skin a full screen upward, so
+   whatever peeks above stays dressed as the bar in either theme. */
+.site-nav::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 1200px;
+  /* Solid, not the nav's translucent glass: iOS skips backdrop blur in
+     the overscroll zone, so a tinted strip would ghost the content
+     beneath it. Both themes' nav tints share the page background's own
+     color, so opaque --bg reads as exactly the bar over empty page. */
+  background: var(--bg);
+  pointer-events: none;
+}
+.site-nav > .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 58px; }
+.brand {
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.brand:hover { color: var(--accent); text-decoration: none; }
+/* Menu band: its own tinted row under the brand bar, giving the bar a
+   clear hierarchy. Every item is always visible on every width, wrapping
+   onto more rows when space runs out. */
+.sub-nav { background: var(--subnav-bg); border-top: 1px solid var(--line); }
+.nav-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; padding: 6px 0; }
+.nav-links a {
+  color: var(--ink-mute);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+/* Keep the global underline off menu items in every input mode. */
+.nav-links a:hover { text-decoration: none; }
+/* Hover styling only where a real hover exists. On touch, a tap glues a
+   sticky :hover to the last-tapped item, which lingered as a stale grey
+   pill after the active section moved on. The hover wash is a faint brand
+   tint; the active state below stays the stronger brand wash and wins on
+   an item that is both hovered and active. */
+@media (hover: hover) {
+  .nav-links a:hover { color: var(--ink); background: rgba(171, 207, 55, 0.12); }
+}
+.nav-links a.active { color: var(--accent); background: var(--accent-soft); }
+/* Theme toggle: the sun spins away as the crescent moon spins in, one
+   drawing crossfading between two marks. Driven by the theme attribute so
+   the swap plays on every switch, using only opacity and transform, which
+   every mobile browser animates. */
+.theme-toggle {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  padding: 0;
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  box-shadow: none; /* a round icon button opts out of the key edge */
+  color: var(--accent); /* chartreuse moon at night */
+  transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s, color 0.35s;
+}
+html[data-theme="light"] .theme-toggle { color: var(--amber); } /* warm sun by day */
+/* button.theme-toggle outranks the tactile key rules (button:not(:disabled):hover
+   and friends), so the toggle turns on hover instead of inheriting the lift. */
+@media (hover: hover) {
+button.theme-toggle:hover {
+  background: var(--accent-soft);
+  border-color: rgba(171, 207, 55, 0.55);
+  transform: rotate(12deg) scale(1.08);
+  box-shadow: 0 0 0 4px rgba(171, 207, 55, 0.16);
+}
+}
+button.theme-toggle:active { transform: rotate(-18deg) scale(0.88); box-shadow: none; }
+/* Only opacity and transform: the previous build animated SVG geometry
+   (r, cx, cy) from CSS, which iOS Safari does not apply, leaving a plain
+   dot instead of a moon on phones. */
+.tt-sun, .tt-moon {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transition: transform 0.5s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.35s;
+}
+.tt-moon { opacity: 0; transform: rotate(90deg) scale(0.4); }
+html[data-theme="dark"] .tt-sun { opacity: 0; transform: rotate(-90deg) scale(0.3); }
+html[data-theme="dark"] .tt-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+/* The toggle sits at the top edge, so its tooltip opens downward and hugs
+   the right edge instead of running off screen. */
+.theme-toggle[data-tip]::after { bottom: auto; top: calc(100% + 10px); left: auto; right: 0; transform: translateY(-6px); }
+.theme-toggle[data-tip]::before { bottom: auto; top: calc(100% - 1px); border-top-color: transparent; border-bottom-color: var(--ink); transform: translate(-50%, -6px); }
+.theme-toggle[data-tip]:hover::after, .theme-toggle[data-tip]:focus-visible::after { transform: translateY(0); }
+.theme-toggle[data-tip]:hover::before, .theme-toggle[data-tip]:focus-visible::before { transform: translate(-50%, 0); }
+
+/* Sponsor: a quiet heart beside the theme toggle that warms to the GitHub
+   sponsor pink on hover, linking out to the sponsors page. */
+.nav-actions { display: inline-flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.sponsor-btn {
+  position: relative;
+  width: 40px; height: 40px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s, color 0.25s;
+}
+.sponsor-btn svg { display: block; }
+@media (hover: hover) {
+  .sponsor-btn:hover {
+    color: var(--sponsor);
+    border-color: var(--sponsor-line);
+    background: var(--sponsor-soft);
+    transform: scale(1.09);
+    box-shadow: 0 0 0 4px var(--sponsor-glow);
+    text-decoration: none;
+  }
+}
+.sponsor-btn:focus-visible { outline: 2px solid var(--sponsor); outline-offset: 3px; }
+.sponsor-btn:active { transform: scale(0.9); }
+/* Its own tooltip, matching the theme toggle's exactly: the bubble opens
+   downward hugging the button's right edge, while the arrow wedge stays
+   centered under the heart, so the pair reads as one consistent family. */
+/* The sponsor tooltip is the one place the suite is allowed to be magical: a
+   charmed bubble with a pink-to-gold gradient keyline that springs open and
+   breathes a soft aura, JS-built sparkles twinkling around its rim, and a
+   gentle stream of hearts floating up from the button while it is hovered.
+   Everything degrades: keyboard focus gets the bubble and sparkles, touch
+   gets none of it (the tap navigates), and reduced motion gets a calm fade. */
+.sponsor-btn[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; top: calc(100% + 12px); right: 0;
+  width: max-content; max-width: 230px;
+  padding: 9px 14px; border-radius: 12px;
+  border: 4px solid transparent;
+  background:
+    linear-gradient(var(--ink), var(--ink)) padding-box,
+    linear-gradient(125deg, #dcaf70, #c9a6ff 48%, #dd5fd1) border-box;
+  color: var(--bg);
+  font-size: 0.8rem; font-weight: 700; line-height: 1.35; letter-spacing: 0.01em;
+  opacity: 0; transform: translateY(-8px) scale(0.86); transform-origin: top right;
+  pointer-events: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 16px var(--sponsor-glow), 0 0 40px var(--sponsor-glow);
+  transition: opacity 0.2s ease, transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 60;
+}
+.sponsor-btn[data-tip]::before {
+  content: "";
+  position: absolute; left: 50%; top: calc(100% + 8.5px);
+  width: 11px; height: 11px;
+  background: var(--ink);
+  border-style: solid; border-color: transparent; border-width: 1.5px 0 0 1.5px;
+  border-image: linear-gradient(135deg, var(--sponsor), #c9a6ff) 1;
+  opacity: 0; transform: translate(-50%, -6px) rotate(45deg); pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  /* No shadow of its own: the sunken half would silhouette inside the bubble.
+     Over the bubble, sunk deep enough that its two keylined edges CROSS the
+     bubble's keyline: the ink opens the border across the base while the
+     crossings seal both shoulders, so the line flows around the arrow. */
+  z-index: 61;
+}
+.sponsor-btn[data-tip]:hover::after, .sponsor-btn[data-tip]:focus-visible::after {
+  opacity: 1; transform: translateY(0) scale(1);
+  animation: sponsor-aura 2.6s ease-in-out 0.5s infinite;
+}
+.sponsor-btn[data-tip]:hover::before, .sponsor-btn[data-tip]:focus-visible::before { opacity: 1; transform: translate(-50%, 0) rotate(45deg); }
+@keyframes sponsor-aura {
+  0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 16px var(--sponsor-glow), 0 0 40px var(--sponsor-glow); }
+  50% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 24px var(--sponsor-glow), 0 0 60px var(--sponsor-glow); }
+}
+
+/* The sparkle rim: a JS-built layer sized to the bubble, holding little stars
+   parked just off its edge, each twinkling on its own phase. */
+.sponsor-fx {
+  position: absolute; top: calc(100% + 12px); right: 0;
+  pointer-events: none; opacity: 0;
+  transition: opacity 0.25s ease 0.08s;
+  z-index: 62;
+}
+.sponsor-btn:hover .sponsor-fx, .sponsor-btn:focus-visible .sponsor-fx { opacity: 1; }
+.sponsor-fx { --spk-a: var(--sponsor); --spk-b: #ffd9ec; --spk-c: #ffe2a1; }
+html[data-theme="light"] .sponsor-fx { --spk-b: #d4589f; --spk-c: #d99a2b; }
+.sponsor-fx .spk {
+  position: absolute; line-height: 1;
+  color: var(--spk-a);
+  text-shadow: 0 0 6px var(--sponsor-glow), 0 0 14px var(--sponsor-glow);
+  animation: spk-twinkle 1.8s ease-in-out infinite;
+}
+@keyframes spk-twinkle {
+  0%, 100% { transform: scale(0.2) rotate(0deg); opacity: 0; }
+  55% { transform: scale(1) rotate(120deg); opacity: 1; }
+}
+
+/* Hearts that drift up out of the button while it is hovered. Spawned by JS
+   with per-heart drift, spin, size, and duration in custom properties. */
+.sponsor-heart {
+  position: absolute; left: 50%; top: 50%;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  pointer-events: none; opacity: 0; color: var(--sponsor);
+  animation: heart-float var(--hd, 1.3s) cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
+  z-index: 63; /* above the bubble: the hearts tumble across it, not behind it */
+}
+.sponsor-heart svg { display: block; width: 100%; height: 100%; fill: currentColor; filter: drop-shadow(0 0 6px var(--sponsor-glow)); }
+/* The button lives at the top of the page, so the hearts fall like petals,
+   outward and down past the tooltip, instead of rising straight off-screen. */
+@keyframes heart-float {
+  0% { transform: translate(0, 0) scale(0.35) rotate(0deg); opacity: 0; }
+  16% { opacity: 0.95; }
+  100% { transform: translate(var(--hx, 0px), 84px) scale(var(--hs, 1)) rotate(var(--hr, 0deg)); opacity: 0; }
+}
+
+@media (hover: none) { .sponsor-btn[data-tip]::after, .sponsor-btn[data-tip]::before, .sponsor-fx { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .sponsor-btn { transition: color 0.2s, background 0.2s, border-color 0.2s; }
+  .sponsor-btn[data-tip]::after { transition: opacity 0.12s ease; transform: none; animation: none; }
+  .sponsor-btn[data-tip]::before { transition: opacity 0.12s ease; transform: translate(-50%, 0) rotate(45deg); }
+  .sponsor-btn[data-tip]:hover::after, .sponsor-btn[data-tip]:focus-visible::after { transform: none; animation: none; }
+  .sponsor-fx .spk { animation: none; opacity: 0.75; }
+  .sponsor-heart { display: none; }
+}
+[id] { scroll-margin-top: calc(var(--nav-h, 104px) + 16px); }
+
+/* Light theme */
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f4ee;
+  --bg-raise: #fffefb;
+  --panel: #ffffff;
+  --panel-2: #edeade;
+  --line: rgba(30, 24, 12, 0.12);
+  --line-strong: rgba(30, 24, 12, 0.22);
+  --ink: #211c14;
+  --ink-soft: #4f4739;
+  --ink-mute: #6e6556;
+  --accent: #0d6a2f;
+  --accent-soft: rgba(171, 207, 55, 0.22);
+  --sponsor: #bf3989;
+  --sponsor-soft: rgba(191, 57, 137, 0.10);
+  --sponsor-glow: rgba(191, 57, 137, 0.15);
+  --sponsor-line: rgba(191, 57, 137, 0.45);
+  --green: #03765a; --green-soft: rgba(52, 199, 89, 0.14);
+  --amber: #b83c08; --amber-soft: rgba(255, 159, 10, 0.14);
+  --red: #c02418; --red-soft: rgba(255, 69, 58, 0.1);
+  --blue: #1d63c4; --blue-soft: rgba(10, 132, 255, 0.11);
+  --nav-bg: rgba(246, 244, 238, 0.85);
+  --subnav-bg: rgba(171, 207, 55, 0.12);
+  --btn-edge: rgba(84, 71, 65, 0.24);
+  --btn-edge-primary: #85a428;
+  --btn-ambient: rgba(84, 71, 65, 0.16);
+  --btn-glow: rgba(171, 207, 55, 0.45);
+  --sb-rail: rgba(126, 156, 38, 0.2);
+  --card-shadow: 0 1px 2px rgba(84, 71, 65, 0.08), 0 8px 20px rgba(84, 71, 65, 0.13);
+  --fab-shadow: 0 2px 5px rgba(84, 71, 65, 0.22), 0 10px 22px rgba(171, 207, 55, 0.45);
+  --fab-shadow-hover: 0 3px 7px rgba(84, 71, 65, 0.2), 0 14px 28px rgba(171, 207, 55, 0.6);
+  --fab-shadow-active: 0 1px 3px rgba(84, 71, 65, 0.22), 0 4px 10px rgba(171, 207, 55, 0.4);
+}
+html[data-theme="light"] body {
+  background-image: radial-gradient(1100px 500px at 15% -5%, rgba(171, 207, 55, 0.18), transparent 60%);
+}
+html[data-theme="light"] .to-top { background: #abcf37; border-color: #abcf37; color: #101400; }
+@media (hover: hover) {
+html[data-theme="light"] .to-top:hover { background: #bcdf4e; border-color: #bcdf4e; }
+}
+html[data-theme="light"] button.primary { background: #abcf37; border-color: #abcf37; color: #101400; }
+@media (hover: hover) {
+html[data-theme="light"] button.primary:hover { background: #bcdf4e; box-shadow: 0 6px 0 var(--btn-edge-primary), 0 8px 6px var(--btn-ambient), 0 4px 14px rgba(171, 207, 55, 0.45), inset 0 1.5px 0 rgba(255, 255, 255, 0.35); }
+}
+html[data-theme="light"] button.primary:active { box-shadow: 0 2px 0 var(--btn-edge-primary), 0 4px 4px var(--btn-ambient), 0 2px 8px rgba(171, 207, 55, 0.45), inset 0 2px 6px 1px rgba(0, 0, 0, 0.28), inset 0 1.5px 0 rgba(255, 255, 255, 0.12); }
+/* A disabled primary stays a flat ghost in light mode too; the light
+   primary rule would otherwise outrank the disabled state and paint the
+   chartreuse key under the dashed border. */
+html[data-theme="light"] button.primary:disabled,
+html[data-theme="light"] button.primary:disabled:hover { background: transparent; border-color: var(--line); color: var(--ink-mute); box-shadow: none; }
+html[data-theme="light"] .privacy { border-color: rgba(171, 207, 55, 0.55); }
+
+/* Background scene: depth-of-field drift with scroll parallax */
+.bg-scene {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  --face-bg: rgba(171, 207, 55, 0.045);
+  --face-line: rgba(171, 207, 55, 0.26);
+}
+
+.orb { position: absolute; border-radius: 50%; filter: blur(70px); }
+.orb-a {
+  width: clamp(260px, 40vw, 500px); height: clamp(260px, 40vw, 500px);
+  left: -120px; top: -100px;
+  background: radial-gradient(circle, rgba(171, 207, 55, 0.13), transparent 65%);
+  animation: drift-a 46s ease-in-out infinite alternate;
+}
+.orb-b {
+  width: clamp(300px, 44vw, 560px); height: clamp(300px, 44vw, 560px);
+  right: -160px; bottom: -140px;
+  background: radial-gradient(circle, rgba(84, 71, 65, 0.38), transparent 65%);
+  animation: drift-b 52s ease-in-out infinite alternate;
+}
+@keyframes drift-a { to { transform: translate3d(90px, 60px, 0) scale(1.08); } }
+@keyframes drift-b { to { transform: translate3d(-70px, -50px, 0) scale(1.05); } }
+
+.star-layer {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+  transform: translate3d(
+    calc(var(--px, 0) * var(--depth, 6) * 1px),
+    calc(var(--py, 0) * var(--depth, 6) * 1px - var(--sy, 0) * var(--sfac, 0.05) * 1px),
+    0);
+}
+.sl-far { --depth: 4; --sfac: 0.03; }
+.sl-mid { --depth: 9; --sfac: 0.08; }
+.sl-near { --depth: 15; --sfac: 0.16; }
+.star {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: rgba(214, 236, 132, 0.55);
+  box-shadow: 0 0 6px rgba(214, 236, 132, 0.4);
+  opacity: 0.12;
+  animation: twinkle 7s ease-in-out infinite;
+  will-change: opacity;
+}
+.sl-far .star { width: 2px; height: 2px; filter: blur(1px); }
+.sl-near .star { width: 5px; height: 5px; box-shadow: 0 0 11px rgba(214, 236, 132, 0.5); }
+@keyframes twinkle { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.7; } }
+html[data-theme="light"] .star { opacity: 0 !important; animation: none; }
+
+/* Shape wrapper: pointer parallax + scroll parallax on one composited transform */
+.shape {
+  position: absolute;
+  will-change: transform;
+  transform: translate3d(
+    calc(var(--px, 0) * var(--depth, 12) * 1px),
+    calc(var(--py, 0) * var(--depth, 12) * 1px - var(--sy, 0) * var(--sfac, 0) * 1px),
+    0);
+}
+.dx { animation: driftX var(--dxt, 24s) ease-in-out infinite alternate; }
+.dy { animation: driftY var(--dyt, 30s) ease-in-out infinite alternate; }
+.dx, .dy { width: 100%; height: 100%; }
+@keyframes driftX { to { transform: translateX(var(--dxa, 28px)); } }
+@keyframes driftY { to { transform: translateY(var(--dya, -36px)); } }
+
+/* Kinds */
+.cube3d { perspective: 900px; }
+.cube3d .inner {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  animation: tumble var(--spin, 44s) linear infinite var(--dir, normal);
+}
+.cube3d .f { position: absolute; inset: 0; background: var(--face-bg); border: 1px solid var(--face-line); }
+.cube3d .f:nth-child(1) { transform: rotateY(0deg) translateZ(var(--cs)); }
+.cube3d .f:nth-child(2) { transform: rotateY(90deg) translateZ(var(--cs)); }
+.cube3d .f:nth-child(3) { transform: rotateY(180deg) translateZ(var(--cs)); }
+.cube3d .f:nth-child(4) { transform: rotateY(270deg) translateZ(var(--cs)); }
+.cube3d .f:nth-child(5) { transform: rotateX(90deg) translateZ(var(--cs)); }
+.cube3d .f:nth-child(6) { transform: rotateX(-90deg) translateZ(var(--cs)); }
+@keyframes tumble {
+  0%   { transform: rotateX(-8deg) rotateY(0deg) rotateZ(5deg); }
+  25%  { transform: rotateX(-26deg) rotateY(90deg) rotateZ(-4deg); }
+  50%  { transform: rotateX(-12deg) rotateY(180deg) rotateZ(-9deg); }
+  75%  { transform: rotateX(-30deg) rotateY(270deg) rotateZ(3deg); }
+  100% { transform: rotateX(-8deg) rotateY(360deg) rotateZ(5deg); }
+}
+
+.sph .inner {
+  width: 100%; height: 100%; border-radius: 50%;
+  background: radial-gradient(circle at 31% 28%, rgba(214, 236, 132, 0.55), rgba(171, 207, 55, 0.25) 42%, rgba(43, 54, 8, 0.3) 78%, transparent 100%);
+  box-shadow: inset -14px -12px 28px rgba(0, 0, 0, 0.35);
+  animation: sway 21s ease-in-out infinite alternate;
+}
+@keyframes sway { from { transform: rotate(-14deg); } to { transform: rotate(10deg); } }
+
+/* Composition: balanced left/right, sized XL to tiny, blur = distance */
+.p1 { left: -74px; top: 56%; width: 260px; height: 260px; --cs: 130px; --sfac: 0.3; --depth: 26; --spin: 76s; --dxt: 31s; --dyt: 24s; filter: blur(1.5px); opacity: 0.3; }
+.p2 { right: 8%; top: 30%; width: 110px; height: 110px; --cs: 55px; --sfac: 0.2; --depth: 22; --dxt: 26s; --dyt: 18s; --dxa: -34px; --dya: 30px; opacity: 0.8; }
+.p3 { left: 7%; top: 12%; width: 72px; height: 72px; --cs: 36px; --sfac: 0.15; --depth: 16; --spin: 36s; --dir: reverse; --dxt: 21s; --dyt: 28s; opacity: 0.7; }
+.p4 { left: 4%; top: 118%; width: 88px; height: 88px; --sfac: 0.22; --depth: 28; --dxt: 19s; --dyt: 27s; --dxa: 26px; --dya: -44px; opacity: 0.55; }
+.p5 { right: 12%; top: 108%; width: 52px; height: 52px; --sfac: 0.14; --depth: 12; --dxt: 25s; --dyt: 33s; filter: blur(1px); opacity: 0.5; }
+.p6 { right: 22%; top: 6%; width: 44px; height: 44px; --cs: 22px; --sfac: 0.06; --depth: 6; --spin: 58s; --dir: reverse; --dxt: 33s; --dyt: 41s; --dxa: 18px; --dya: 22px; filter: blur(3px); opacity: 0.5; }
+.p7 { left: 12%; top: 80%; width: 34px; height: 34px; --sfac: 0.05; --depth: 8; --dxt: 29s; --dyt: 37s; --dxa: -20px; --dya: -26px; filter: blur(2px); opacity: 0.45; }
+.p8 { right: 4%; top: 165%; width: 60px; height: 60px; --cs: 30px; --sfac: 0.26; --depth: 18; --spin: 40s; --dxt: 23s; --dyt: 30s; opacity: 0.65; }
+.p9 { left: 3%; top: 150%; width: 30px; height: 30px; --cs: 15px; --sfac: 0.12; --depth: 10; --spin: 50s; --dir: reverse; --dxt: 27s; --dyt: 35s; filter: blur(3.5px); opacity: 0.4; }
+.p10 { right: 5%; top: 92%; width: 122px; height: 122px; --sfac: 0.24; --depth: 26; --dxt: 22s; --dyt: 29s; --dxa: -28px; --dya: -38px; opacity: 0.5; }
+.p11 { right: 17%; top: 52%; width: 30px; height: 30px; --sfac: 0.06; --depth: 7; --dxt: 31s; --dyt: 39s; --dxa: 16px; --dya: 20px; filter: blur(2px); opacity: 0.4; }
+
+html[data-theme="light"] .bg-scene { --face-bg: rgba(171, 207, 55, 0.06); --face-line: rgba(20, 130, 60, 0.3); }
+html[data-theme="light"] .orb-a { background: radial-gradient(circle, rgba(171, 207, 55, 0.2), transparent 65%); }
+html[data-theme="light"] .orb-b { background: radial-gradient(circle, rgba(84, 71, 65, 0.14), transparent 65%); }
+html[data-theme="light"] .sph .inner {
+  background: radial-gradient(circle at 31% 28%, rgba(171, 207, 55, 0.5), rgba(107, 160, 30, 0.3) 42%, rgba(50, 80, 10, 0.2) 78%, transparent 100%);
+  box-shadow: inset -14px -12px 28px rgba(60, 60, 40, 0.18);
+}
+
+@media (max-width: 1080px) {
+  .p1 { left: -110px; } .p2 { right: 2%; } .p3 { left: 2%; } .p4 { left: 1%; }
+  .p5 { right: 4%; } .p6 { right: 10%; } .p7 { left: 4%; } .p8 { right: 1%; } .p9 { left: 1%; } .p10 { right: 1%; } .p11 { right: 8%; }
+}
+@media (max-width: 700px) { .shape { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .orb, .star, .dx, .dy, .sph .inner, .cube3d .inner { animation: none !important; }
+  .shape, .star-layer { transform: none; will-change: auto; }
+}
+
+/* Button tooltips: a small animated hint on hover and keyboard focus. */
+:where(button[data-tip]) { position: relative; } /* :where() = 0 specificity, so a button's own positioning (e.g. an absolute clear button) is never overridden */
+button[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translate(-50%, 6px);
+  width: max-content;
+  max-width: 230px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--bg);
+  border: 1px solid var(--line-strong);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 60;
+}
+button[data-tip]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 1px); /* wedge tip in the gap, base tucked 1px under the bubble */
+  transform: translate(-50%, 6px);
+  border: 6px solid transparent;
+  border-top-color: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 61; /* paints over the bubble edge so wedge and bubble read as one shape */
+}
+button[data-tip]:hover::after, button[data-tip]:focus-visible::after,
+button[data-tip]:hover::before, button[data-tip]:focus-visible::before {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+button[data-tip][data-tip-off]:disabled:hover::after,
+button[data-tip][data-tip-off]:disabled:focus-visible::after {
+  content: attr(data-tip-off);
+}
+button:disabled { pointer-events: auto; }
+/* No hover on touch devices, where tapping a button would flash a tooltip. */
+@media (hover: none) {
+  button[data-tip]::after, button[data-tip]::before { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  button[data-tip]::after, button[data-tip]::before { transition: opacity 0.12s ease; }
+}
+
+/* Hero illustration theming. The hero is an inline SVG drawn with the dark
+   palette in its attributes. CSS outranks presentation attributes, so these
+   rules remap every raw color onto the matching theme token: in dark mode
+   they resolve to the same values, and in light mode the same drawing
+   renders as a proper light version. Elements that soften a color with
+   fill-opacity or stroke-opacity keep doing so on the remapped color. */
+.hero-art [fill="#16140f"] { fill: var(--bg-raise); }
+.hero-art [fill="#0d0c0a"] { fill: var(--bg); }
+.hero-art [fill="#ffffff"] { fill: var(--ink); }
+.hero-art [stroke="#ffffff"] { stroke: var(--ink); }
+.hero-art [fill="#f3f0e9"] { fill: var(--ink); }
+.hero-art [fill="#c8c2b6"] { fill: var(--ink-soft); }
+.hero-art [fill="#8f887c"] { fill: var(--ink-mute); }
+.hero-art [fill="#abcf37"] { fill: var(--accent); }
+.hero-art [stroke="#abcf37"] { stroke: var(--accent); }
+.hero-art [fill="#a7e26a"] { fill: var(--green); }
+.hero-art [stroke="#a7e26a"] { stroke: var(--green); }
+.hero-art [fill="#ffc65c"] { fill: var(--amber); }
+.hero-art [stroke="#ffc65c"] { stroke: var(--amber); }
+.hero-art [fill="#ff7a6e"] { fill: var(--red); }
+.hero-art [stroke="#ff7a6e"] { stroke: var(--red); }
+.hero-art [stop-color="#abcf37"] { stop-color: var(--accent); }
+
+/* Note shown when the inspector preview is truncated for very large pastes */
+.inspector-truncated { color: var(--ink-mute); font-style: italic; }
+
+/* Light mode focus and border accents follow the light theme's deep green instead of the
+   dark theme's chartreuse constants. */
+html[data-theme="light"] textarea:focus,
+html[data-theme="light"] input[type="text"]:focus,
+html[data-theme="light"] input[type="search"]:focus { border-color: rgba(171, 207, 55, 0.7); }
+@media (hover: hover) {
+html[data-theme="light"] button:not(.primary):not(:disabled):hover { border-color: rgba(13, 106, 47, 0.45); }
+}
+html[data-theme="light"] .chip.ok { border-color: rgba(171, 207, 55, 0.5); }
+
+/* The FAQ disclosure opts out of the tactile key states. The key rules
+   outrank the accordion's class reset (:not() inflates their specificity
+   and they sit later in the file), so hovering the row painted a square
+   panel-colored key cap over the card's rounded corners. Each leaking
+   state is pinned back here, at the end of the file so ties resolve to
+   these rules. */
+@media (hover: hover) {
+  .faq .faq-q button:not(:disabled):hover { background: transparent; transform: none; box-shadow: none; }
+}
+.faq .faq-q button:not(:disabled):active,
+.faq .faq-q button:active {
+  background: transparent;
+  transform: none;
+  box-shadow: none;
+}
+.faq .faq-q button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 14px;
+}
+
+
+/* The nav's last stop leaves the page: a quiet outlined pill pointing at
+   the full projects directory. */
+.nav-links .nav-external {
+  border: 1px solid rgba(171, 207, 55, 0.5);
+  border-radius: 999px;
+  padding: 5px 14px;
+}
+.nav-links .nav-external::after { content: " \2192"; }
+@media (hover: hover) {
+  .nav-links .nav-external:hover {
+    border-color: var(--accent);
+    text-decoration: none;
+  }
+}
+
+
+/* The bar carries a whisper of shadow at all times. Two tight
+   negative-spread layers keep the edge soft without a halo. */
+.site-nav {
+  box-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.55), 0 5px 14px -8px rgba(0, 0, 0, 0.35);
+}
+html[data-theme="light"] .site-nav {
+  box-shadow: 0 14px 30px -18px rgba(84, 71, 65, 0.3), 0 5px 14px -8px rgba(84, 71, 65, 0.18);
+}
+
+/* Terminal section: command cards with one-press copy. */
+.cli-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+.cli-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cli-card h3 { margin: 0; font-size: 0.95rem; }
+.cli-card pre.snippet { margin: 0; padding: 12px 13px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+.cli-card pre.snippet code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.82rem; line-height: 1.55; white-space: pre; }
+.cli-note { margin: 0; color: var(--ink-soft); font-size: 0.85rem; line-height: 1.5; flex: 1; }
+.cli-copy { align-self: flex-start; font-size: 0.85rem; padding: 8px 14px; }
+.cli-foot { margin-top: 14px; font-size: 0.9rem; color: var(--ink-soft); }
+@media (max-width: 900px) { .cli-grid { grid-template-columns: 1fr; } }
+
+/* Section headings inside the results and prose areas. */
+.section-title {
+  margin: 40px 0 6px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+/* The same title style, sitting inside the tool card instead of between
+   sections, so it hugs the top of the card rather than floating 40px off. */
+.tool-title { margin: 0 0 14px; }
+.section-sub { margin: 0 0 16px; color: var(--ink-mute); font-size: 0.92rem; }
+
+/* ---- Stripping options ---- */
+.options-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.opt-range { display: inline-flex; align-items: center; gap: 10px; font-size: 0.92rem; font-weight: 600; color: var(--ink-soft); }
+.opt-range output { min-width: 1ch; color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }
+.opt-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 0.92rem; font-weight: 600; color: var(--ink-soft); cursor: pointer; }
+.opt-toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+.opt-note { margin: 12px 0 0; color: var(--ink-mute); font-size: 0.85rem; max-width: 68ch; }
+
+/* Range inputs wear the brand: a slim track and a round chartreuse thumb. */
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 130px; height: 6px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); cursor: pointer; }
+input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: none; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); cursor: pointer; }
+input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: none; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); cursor: pointer; }
+
+/* The whole tool card is the drop zone while a file drag is over the page.
+   The overlay ignores pointer input so the drop lands on whatever is under
+   the cursor and bubbles to the window handler. */
+.card.dropping { position: relative; border-color: var(--accent); }
+.card.dropping::after {
+  content: "🪄 Drop your photo";
+  position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(13, 12, 10, 0.72);
+  border: 2px dashed var(--accent); border-radius: var(--radius-lg);
+  color: var(--accent); font-size: 1.3rem; font-weight: 800; letter-spacing: -0.01em;
+}
+html[data-theme="light"] .card.dropping::after { background: rgba(246, 244, 238, 0.82); }
+
+/* ---- Before / after wipe ----
+   Both renders fill the stage with object-fit: contain, so they sit pixel for
+   pixel on top of each other. The stripped one is clipped from the right by the
+   slider, so wiping reveals it over the original. If the picture is unchanged,
+   the wipe shows no seam, which is the proof. */
+.compare { margin-top: 8px; }
+.compare-stage {
+  touch-action: pan-y;
+  --wipe: 55%;
+  position: relative;
+  height: 320px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  cursor: ew-resize;
+  touch-action: none;
+  /* A checkerboard so transparency reads as transparency. The tiles span a
+     light and a mid grey, not two near-white greys, so white and near-white
+     artwork stays visible against the darker tiles during the wipe. */
+  background-color: #ededea;
+  background-image:
+    linear-gradient(45deg, #a3a39c 25%, transparent 25%, transparent 75%, #a3a39c 75%),
+    linear-gradient(45deg, #a3a39c 25%, transparent 25%, transparent 75%, #a3a39c 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+.compare-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 18px; pointer-events: none; }
+/* The original sits on top, clipped from the divider leftward, so the left of
+   the stage shows Before and the right shows the stripped After underneath. */
+#img-before.compare-top { clip-path: inset(0 calc(100% - var(--wipe)) 0 0); }
+/* A thick chartreuse bar with a dark 1.5px keyline and a soft shadow, so it
+   holds a strong contrast over both the light and the dark checker tiles. It
+   uses the bright brand chartreuse in BOTH themes (a filled brand surface, like
+   the buttons), not the light theme's darker text accent, whose dark icons
+   would read low-contrast on the dark-green fill. */
+.compare-divider { position: absolute; top: 0; bottom: 0; left: var(--wipe); width: 4px; background: #abcf37; transform: translateX(-2px); cursor: ew-resize; touch-action: none; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), 0 0 12px rgba(0, 0, 0, 0.4); }
+.compare-divider:focus-visible { outline: none; }
+.compare-grip { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border-radius: 50%; background: #abcf37; box-shadow: 0 0 0 2.5px rgba(0, 0, 0, 0.45), 0 3px 12px rgba(0, 0, 0, 0.6); cursor: ew-resize; }
+.compare-grip::before { content: "\2039\203A"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--accent-ink); font-size: 17px; font-weight: 800; }
+.compare-divider:focus-visible .compare-grip { outline: none; box-shadow: 0 0 0 2.5px rgba(0, 0, 0, 0.45), 0 3px 12px rgba(0, 0, 0, 0.6), 0 0 0 3px #101400, 0 0 0 6px #fff; }
+.compare-badge { position: absolute; top: 12px; padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; background: rgba(13, 12, 10, 0.74); color: #f3f0e9; pointer-events: none; }
+.badge-before { left: 12px; }
+.badge-after { right: 12px; }
+.compare-note { margin: 10px 0 0; color: var(--red); font-size: 0.85rem; min-height: 1em; }
+
+@media (max-width: 640px) {
+  .compare-stage {
+  touch-action: pan-y; height: 240px; }
+  input[type="range"] { width: 100px; }
+}
+
+/* ---- Color editor ---- */
+.color-editor { display: grid; gap: 12px; margin-top: 8px; }
+.color-editor-head { display: flex; justify-content: flex-end; }
+.color-reset {
+  font-size: 0.85rem; font-weight: 700; padding: 7px 14px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink); cursor: pointer;
+}
+.color-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+  padding: 12px 14px; background: var(--bg-raise); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.color-swatch {
+  -webkit-appearance: none; appearance: none; width: 44px; height: 44px; padding: 0;
+  border: 1px solid var(--line-strong); border-radius: 13px; overflow: hidden; cursor: pointer; background: none; flex: none;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+.color-swatch::-webkit-color-swatch { border: none; border-radius: 12px; }
+.color-swatch::-moz-color-swatch { border: none; border-radius: 12px; }
+@media (hover: hover) { .color-swatch:hover { transform: scale(1.06); box-shadow: 0 0 0 2px var(--accent), 0 4px 10px rgba(0, 0, 0, 0.4); } }
+.color-swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Each swatch wears a small pencil badge so it reads as editable, on touch as
+   well as on hover. The badge ignores pointer input so a tap still opens the
+   color picker. */
+.swatch-wrap { position: relative; display: inline-flex; flex: none; }
+.swatch-cue {
+  position: absolute; right: -5px; bottom: -5px; width: 18px; height: 18px; border-radius: 50%;
+  /* Chartreuse in both themes to match the buttons and keep the dark pencil high-contrast. */
+  background: #abcf37 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23101400' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 19h4L19 9a2 2 0 0 0-3-3L6 16z'/%3E%3C/svg%3E") center / 11px no-repeat;
+  border: 1.5px solid var(--panel); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); pointer-events: none;
+}
+.color-hint { margin: 0 0 4px; color: var(--ink-mute); font-size: 0.85rem; }
+
+/* Preview background chooser. */
+.preview-bg { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.preview-bg-label { font-size: 0.85rem; font-weight: 600; color: var(--ink-mute); margin-right: 2px; }
+.bg-opt {
+  font-size: 0.8rem; font-weight: 700; padding: 6px 13px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink-soft); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.bg-opt.is-active { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+/* The selected preset is locked: a dashed accent keyline, a not-allowed cursor,
+   and a pressed-in look, so it reads as the current choice and cannot be clicked
+   again. The press sinks the key onto its base rather than lifting off the top,
+   so its bottom lands on the same base line as the neighbouring keys (their
+   0 5px 0 edge) and the depth reads from below, like the site's other keys.
+   Presets only; the Custom chip stays live so its color can still be changed. */
+button.bg-opt.is-active,
+button.bg-opt.is-active:hover {
+  cursor: not-allowed;
+  border-style: dashed;
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--btn-edge), 0 4px 4px var(--btn-ambient), inset 0 2px 4px rgba(0, 0, 0, 0.22), inset 0 1.5px 0 rgba(255, 255, 255, 0.06);
+}
+label.bg-opt {
+  box-shadow: 0 5px 0 var(--btn-edge), 0 7px 5px var(--btn-ambient), inset 0 1.5px 0 rgba(255, 255, 255, 0.09);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.2s, border-color 0.2s;
+}
+@media (hover: hover) {
+label.bg-opt:hover { border-color: rgba(171, 207, 55, 0.45); transform: translateY(-1px); box-shadow: 0 6px 0 var(--btn-edge), 0 8px 6px var(--btn-ambient), inset 0 1.5px 0 rgba(255, 255, 255, 0.12); }
+}
+label.bg-opt:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--btn-edge), 0 4px 4px var(--btn-ambient), inset 0 2px 6px 1px rgba(0, 0, 0, 0.25), inset 0 1.5px 0 rgba(255, 255, 255, 0.06); }
+.bg-opt.bg-custom input[type="color"] { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; padding: 0; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; background: none; cursor: pointer; }
+.bg-opt.bg-custom input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+.compare-stage.solid { background-image: none; background-color: var(--preview-bg, #fff); }
+.color-name { font-size: 0.85rem; color: var(--ink-soft); font-weight: 600; min-width: 5.5ch; }
+.color-name small { display: block; color: var(--ink-mute); font-weight: 400; font-size: 0.8rem; }
+.color-fields { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-left: auto; }
+.color-field { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-mute); font-weight: 700; }
+.color-field input {
+  padding: 6px 8px; background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 8px; color: var(--ink); font-family: var(--mono); font-size: 0.85rem; text-transform: none; letter-spacing: 0;
+}
+.color-field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.color-field.hex input { width: 9ch; }
+.color-field.rgb input, .color-field.hsl input { width: 13ch; }
+.color-field.cmyk input { width: 15ch; }
+
+.color-row.gradient { flex-direction: column; align-items: stretch; }
+.gradient-head { display: flex; align-items: center; gap: 12px; }
+.gradient-title { font-size: 0.85rem; color: var(--ink-soft); font-weight: 600; }
+.gradient-bar { flex: 1; height: 18px; border-radius: 9px; border: 1px solid var(--line-strong); min-width: 120px; }
+.gradient-stops { display: flex; flex-wrap: wrap; gap: 12px; }
+.gradient-stop { display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--ink-mute); font-weight: 600; }
+.gradient-stop .color-swatch { width: 34px; height: 34px; }
+
+/* The color picker popover. One instance, moved to whichever swatch opened
+   it. Rounded like every other card on the page, themed through the same
+   tokens, identical in every browser. */
+.cp {
+  position: fixed; z-index: 2300; width: 264px; padding: 14px;
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--panel); border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow), 0 18px 44px rgba(0, 0, 0, 0.4);
+}
+/* display: flex above would beat the browser's own [hidden] rule and leave a
+   closed picker painted on the page, so hidden is restated at higher weight. */
+.cp[hidden] { display: none; }
+html[data-theme="light"] .cp { box-shadow: var(--card-shadow), 0 18px 44px rgba(84, 71, 65, 0.28); }
+.cp-sv {
+  position: relative; height: 150px; border-radius: 12px; border: 1px solid var(--line-strong);
+  cursor: crosshair; touch-action: none;
+  /* The picker's own square is theme-independent on purpose: white, black,
+     and the pure hue are the coordinate system, not decoration. */
+  background:
+    linear-gradient(to top, #000, rgba(0, 0, 0, 0)),
+    linear-gradient(to right, #fff, hsl(var(--cp-h, 0) 100% 50%));
+}
+.cp-dot {
+  position: absolute; left: 100%; top: 0; width: 16px; height: 16px; border-radius: 50%;
+  border: 2.5px solid #fff;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%); pointer-events: none;
+}
+.cp-row { display: flex; align-items: center; gap: 10px; }
+/* A round icon button opts out of the key edge, like the theme toggle; the
+   state rules are widened to button.cp-eye so they outrank the key physics. */
+.cp-eye {
+  width: 34px; height: 34px; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; border-radius: 50%; cursor: pointer; box-shadow: none;
+  background: var(--panel-2); border: 1px solid var(--line-strong); color: var(--ink-soft);
+  transition: color 0.12s, border-color 0.12s, transform 0.1s;
+}
+button.cp-eye:hover, button.cp-eye:active { box-shadow: none; transform: none; background: var(--panel-2); }
+@media (hover: hover) { button.cp-eye:hover { color: var(--accent); border-color: var(--accent); } }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) { button.cp-eye:hover { transform: scale(1.06); } }
+@media (prefers-reduced-motion: no-preference) { button.cp-eye:active { transform: scale(0.96); } }
+.cp-chip { width: 30px; height: 30px; flex: none; border-radius: 50%; border: 1px solid var(--line-strong); }
+/* The visible track is a 14px strip painted on ::before; the element itself
+   is 32px tall so a fingertip that misses by a few pixels still lands on it. */
+.cp-hue {
+  position: relative; flex: 1; height: 32px; border-radius: 999px;
+  cursor: pointer; touch-action: none;
+}
+.cp-hue::before {
+  content: ""; position: absolute; inset: 9px 0; border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.cp-hue .cp-dot { top: 50%; left: 0; }
+.cp-hex {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-mute); font-weight: 700;
+}
+.cp-hex input {
+  flex: 1; min-width: 0; padding: 6px 8px; background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 8px; color: var(--ink); font-family: var(--mono); font-size: 0.85rem;
+  text-transform: none; letter-spacing: 0;
+}
+.cp-hex input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cp-sv:focus-visible, .cp-hue:focus-visible, .cp-eye:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .cp { animation: cp-pop 0.16s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes cp-pop { from { opacity: 0; transform: scale(0.94); } }
+}
+
+
+/* ---- Background Begone: the drop well and progress ---- */
+.dropwell {
+  border: 2px dashed var(--line-strong); border-radius: var(--radius);
+  padding: 28px 20px 22px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.dropwell-line { margin: 0; color: var(--ink-soft); font-weight: 600; }
+.dropwell-actions { justify-content: center; }
+.dropwell-note { margin: 0; color: var(--ink-mute); font-size: 0.85rem; max-width: 46ch; }
+
+.progress { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.progress-track {
+  height: 10px; border-radius: 999px; background: var(--panel-2);
+  border: 1px solid var(--line); overflow: hidden;
+}
+.progress-fill {
+  height: 100%; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, #7e9c26, #abcf37);
+  transition: width 0.25s ease;
+}
+/* When a stage has no honest percentage, a chartreuse comet sweeps instead. */
+.progress-fill.indeterminate {
+  width: 40% !important;
+  animation: bgb-sweep 1.2s ease-in-out infinite;
+}
+@keyframes bgb-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(260%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill.indeterminate { animation: none; width: 100% !important; opacity: 0.5; }
+}
+.progress-label { margin: 0; color: var(--ink-mute); font-size: 0.9rem; }
+
+.output-actions { margin-top: 16px; }

@@ -1,0 +1,90 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>alpha repro</title>
+<body>
+<script type="module">
+  import { removeBackground } from "./cutout.js";
+
+  const W = 512, H = 512;
+
+  // Synthetic transparent-input PNG, the kind a sticker or a previous cutout is:
+  // a white disc (opaque core) whose edge fades out over ~14px of fractional
+  // alpha, on a fully transparent background.
+  function makeInput() {
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const ctx = c.getContext("2d");
+    const img = ctx.createImageData(W, H);
+    const cx = W / 2, cy = H / 2, rCore = 110, rEdge = 124;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const d = Math.hypot(x - cx, y - cy);
+        let a = 0;
+        if (d <= rCore) a = 255;
+        else if (d < rEdge) a = Math.round(255 * (rEdge - d) / (rEdge - rCore));
+        const i = (y * W + x) * 4;
+        img.data[i] = 255; img.data[i + 1] = 255; img.data[i + 2] = 255;
+        img.data[i + 3] = a;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return { canvas: c, alpha: (x, y) => img.data[(y * W + x) * 4 + 3] };
+  }
+
+  window.__result = { state: "running" };
+  try {
+    const { canvas: input, alpha: inAlpha } = makeInput();
+
+    // Fact check 1: what does a fresh canvas round-trip do to this input?
+    const rt = document.createElement("canvas");
+    rt.width = W; rt.height = H;
+    const rtx = rt.getContext("2d");
+    rtx.drawImage(input, 0, 0);
+    const rtd = rtx.getImageData(0, 0, W, H).data;
+    const corner = [rtd[0], rtd[1], rtd[2], rtd[3]]; // fully transparent input pixel
+    const center = (() => { const i = ((H/2) * W + W/2) * 4; return [rtd[i], rtd[i+1], rtd[i+2], rtd[i+3]]; })();
+
+    // The real pipeline.
+    const { blob } = await removeBackground(input, { width: W, height: H });
+    const bmp = await createImageBitmap(blob);
+    const oc = document.createElement("canvas");
+    oc.width = W; oc.height = H;
+    const octx = oc.getContext("2d");
+    octx.drawImage(bmp, 0, 0);
+    const out = octx.getImageData(0, 0, W, H).data;
+
+    // Tally the two claimed corruptions.
+    let resurrected = 0, resMaxA = 0, resOpaque = 0, resBlack = 0;
+    let softMadeOpaque = 0, softTotal = 0;
+    const samples = [];
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const ia = inAlpha(x, y);
+        const i = (y * W + x) * 4;
+        const oa = out[i + 3];
+        if (ia === 0 && oa > 0) {
+          resurrected++;
+          if (oa > resMaxA) resMaxA = oa;
+          if (oa === 255) resOpaque++;
+          if (out[i] < 40 && out[i+1] < 40 && out[i+2] < 40) resBlack++;
+          if (samples.length < 6 && oa > 60) samples.push({ x, y, rgb: [out[i], out[i+1], out[i+2]], inA: ia, outA: oa });
+        }
+        if (ia > 0 && ia < 250) {
+          softTotal++;
+          if (oa === 255) softMadeOpaque++;
+        }
+      }
+    }
+    window.__result = {
+      state: "done",
+      roundTrip: { fullyTransparentPixelReadsBack: corner, opaqueCenterReadsBack: center },
+      resurrected, resMaxA, resOpaque, resBlack, samples,
+      softTotal, softMadeOpaque,
+    };
+  } catch (e) {
+    window.__result = { state: "error", message: String(e && e.stack || e) };
+  }
+  document.title = "alpha repro " + window.__result.state;
+  // Report through the static server's access log (the 404 line carries the payload).
+  fetch("/__RESULT__" + encodeURIComponent(JSON.stringify(window.__result))).catch(() => {});
+</script>
