@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, loadSession } from "./cutout.js?v=1.1.0";
+import { removeBackground, loadSession } from "./cutout.js?v=1.2.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -190,12 +190,14 @@ fileInput.addEventListener("change", () => {
   fileInput.value = "";
 });
 
+// The sample thumbnail is already on the page, so its bytes cost nothing to
+// reuse; the only wait is the model, which a hover has already started warming.
 sampleBtn.addEventListener("click", async () => {
   try {
-    const res = await fetch("./assets/sample-dog.jpg");
+    const res = await fetch("./assets/sample.jpg");
     if (!res.ok) throw new Error();
     const blob = await res.blob();
-    processFile(new File([blob], "sample-dog.jpg", { type: "image/jpeg" }));
+    processFile(new File([blob], "the-girl-on-the-boat.jpg", { type: "image/jpeg" }));
   } catch {
     alertMsg("info", "The sample could not be loaded. Try your own photo instead.");
   }
@@ -266,7 +268,15 @@ const warm = () => {
   loadSession().catch(() => { warmed = false; });
 };
 uploadBtn.addEventListener("pointerenter", warm);
+sampleBtn.addEventListener("pointerenter", warm);
+sampleBtn.addEventListener("focus", warm);
 addEventListener("dragenter", (e) => { if (isFileDrag(e)) warm(); });
+// The first sign of engagement starts the model download in the background, so
+// the ~30 MB is on its way while the visitor reads. By the time they click, the
+// only wait left is the model thinking, not the download. One-shot, passive,
+// and skipped for visitors who never interact so a bounce costs no bandwidth.
+["pointermove", "scroll", "keydown", "touchstart"].forEach((ev) =>
+  addEventListener(ev, warm, { once: true, passive: true }));
 
 // -------- color picker popover --------
 // The same picker as the rest of the suite: replaces the browser's built-in

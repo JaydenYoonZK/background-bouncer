@@ -3,6 +3,18 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0] - 2026-07-20
+
+### Fixed
+
+- The progress bar no longer shows a "Working…" label on load. It was visible with nothing running because a stylesheet rule was overriding the hidden state; it now stays hidden until a photo is actually being processed.
+- The FAQ heading now uses the same speech-bubble icon as the rest of the suite.
+
+### Changed
+
+- The sample is now a photo card that shows the shot before you try it: "The Girl on the Boat", by Jayden. Framed on the subject so the cutout comes back clean.
+- The model download now starts on the first sign of engagement, so by the time you click the sample the only wait left is the model thinking, not the download. The sample photo itself is already on the page, so it loads instantly.
+
 ## [1.1.0] - 2026-07-20
 
 ### Changed

@@ -1717,7 +1717,41 @@ button.cp-eye:hover, button.cp-eye:active { box-shadow: none; transform: none; b
 .dropwell-actions { justify-content: center; }
 .dropwell-note { margin: 0; color: var(--ink-mute); font-size: 0.85rem; max-width: 46ch; }
 
+/* The sample as a photo card: users see the shot before they try it. It is a
+   button, so it opts out of the 3D key physics like the round icon buttons do
+   and carries its own flat card styling. */
+.sample-card {
+  display: flex; align-items: center; gap: 12px;
+  width: min(360px, 100%); margin-top: 4px; padding: 8px 12px 8px 8px; box-shadow: none;
+  background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 14px;
+  cursor: pointer; text-align: left;
+  transition: border-color 0.14s, transform 0.1s, background 0.14s;
+}
+.sample-thumb {
+  width: 84px; height: 76px; flex: none; border-radius: 9px;
+  object-fit: cover; object-position: center 32%;
+  border: 1px solid var(--line); background: var(--bg);
+}
+.sample-card-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sample-card-kicker { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-mute); }
+.sample-card-title { font-size: 0.98rem; font-weight: 700; color: var(--ink); }
+.sample-card-go { flex: none; margin-left: 4px; color: var(--accent); display: inline-flex; transition: transform 0.14s; }
+button.sample-card:hover, button.sample-card:active { box-shadow: none; background: var(--panel-2); }
+@media (hover: hover) {
+  button.sample-card:hover { border-color: var(--accent); }
+  button.sample-card:hover .sample-card-go { transform: translateX(3px); }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  button.sample-card:hover { transform: translateY(-1px); }
+}
+button.sample-card:active { transform: none; }
+.sample-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+html[data-theme="light"] .sample-thumb { border-color: var(--line-strong); }
+
 .progress { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+/* display: flex above would beat the browser's own [hidden] rule and leave the
+   empty bar and its "Working…" label showing on load with nothing running. */
+.progress[hidden] { display: none; }
 .progress-track {
   height: 10px; border-radius: 999px; background: var(--panel-2);
   border: 1px solid var(--line); overflow: hidden;

@@ -8,7 +8,7 @@ import * as ort from "./vendor/ort.all.min.mjs";
 import {
   MODEL_SIZE, normalizeImage, minMaxNormalize, guidedFilter,
   luminance, crispen, refineSize, outputSize, applyAlpha,
-} from "./cutout-core.js?v=1.1.0";
+} from "./cutout-core.js?v=1.2.0";
 
 const MODEL_URL = "./models/isnet-int8.onnx";
 const MODEL_CACHE = "bouncer-model-1";
@@ -19,8 +19,11 @@ const MODEL_CACHE = "bouncer-model-1";
 const MODEL_BYTES = 46360717;
 
 // Single-threaded on purpose: GitHub Pages cannot send the isolation headers
-// that multi-threaded wasm needs. The proxy worker keeps the page responsive
-// while the model thinks.
+// multi-threaded wasm needs, and this int8 model does not parallelize on the
+// threaded build anyway (measured 0.99x), nor does WebGPU accept its quantized
+// ops yet. The proxy worker keeps the page responsive while the model thinks.
+// The real win is warming the download early (see app.js) so it is done before
+// the first run.
 ort.env.wasm.numThreads = 1;
 ort.env.wasm.proxy = true;
 

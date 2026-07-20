@@ -35,14 +35,14 @@
       document.head.appendChild(m);
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=1.1.0">
+  <link rel="stylesheet" href="styles.css?v=1.2.0">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Background Bouncer",
     "applicationCategory": "MultimediaApplication",
-    "softwareVersion": "1.1.0",
+    "softwareVersion": "1.2.0",
     "operatingSystem": "Any (browser-based)",
     "url": "https://jaydenyoonzk.github.io/background-bouncer/",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -191,9 +191,18 @@
       <p class="dropwell-line">Drop a photo here, paste one, or</p>
       <div class="toolbar dropwell-actions">
         <button id="upload" class="primary" type="button" aria-label="Upload a photo" data-tip="Pick a photo from your files">Upload a photo</button>
-        <button id="sample" type="button" aria-label="Try the sample photo" data-tip="A black dog on a wooden floor: fur against wood grain">Try a sample</button>
       </div>
       <p class="dropwell-note">JPG, PNG, or WebP. The first run downloads the model (about 30&nbsp;MB), then it is cached for offline use.</p>
+      <button id="sample" class="sample-card" type="button" aria-label="Try the sample photo: The Girl on the Boat, shot by Jayden">
+        <img class="sample-thumb" src="./assets/sample.jpg" alt="" width="96" height="84">
+        <span class="sample-card-text">
+          <span class="sample-card-kicker">Or try a sample</span>
+          <span class="sample-card-title">The Girl on the Boat</span>
+        </span>
+        <span class="sample-card-go" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </button>
     </div>
     <div class="progress" id="progress" hidden>
       <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
@@ -239,7 +248,7 @@
   <p>Background removal sites usually mean uploading your photo to someone's server. This one cannot upload anything: the page's Content Security Policy sets <code>connect-src 'self'</code>, so the browser itself refuses any request except fetching the page's own files. Family photos, ID pictures, unreleased product shots: they all stay in your RAM and nowhere else.</p>
   <p>After the first run the model is cached, and the whole tool works with the network cable pulled out.</p>
 
-  <h2 class="section-title" id="faq"><span aria-hidden="true">❓</span> Frequently asked questions</h2>
+  <h2 class="section-title" id="faq"><span aria-hidden="true">💬</span> Frequently asked questions</h2>
   <div class="faq" id="faq-list">
     <div class="faq-item">
     <h3 class="faq-q"><button type="button" id="faq-b1" aria-expanded="false" aria-controls="faq-a1"><span>What kinds of photos work best?</span><span class="faq-icon" aria-hidden="true"></span></button></h3>
@@ -250,7 +259,7 @@
     <div class="faq-item">
     <h3 class="faq-q"><button type="button" id="faq-b2" aria-expanded="false" aria-controls="faq-a2"><span>Does it handle hair and fur?</span><span class="faq-icon" aria-hidden="true"></span></button></h3>
     <div class="faq-a" id="faq-a2" role="region" aria-labelledby="faq-b2" hidden>
-      <div class="faq-a-inner"><p>Yes, that is the point of the second pass. The neural network gets the shape right, and the guided filter re-cuts the edge against the full-resolution photo, so strands that are thinner than the model's canvas still survive. Try the sample: the dog's fur against the wood grain is exactly this problem.</p></div>
+      <div class="faq-a-inner"><p>Yes, that is the point of the second pass. The neural network gets the shape right, and the guided filter re-cuts the edge against the full-resolution photo, so strands that are thinner than the model's canvas still survive. Try the sample: the hat brim and loose hair against the soft, misty lake are exactly this problem.</p></div>
     </div>
     </div>
     <div class="faq-item">
@@ -288,6 +297,6 @@
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
 </button>
 
-<script type="module" src="app.js?v=1.1.0"></script>
+<script type="module" src="app.js?v=1.2.0"></script>
 </body>
 </html>

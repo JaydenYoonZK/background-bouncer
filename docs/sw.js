@@ -4,7 +4,7 @@
    requests pass through untouched. The cache name carries the release version
    and old caches are dropped on activate. */
 
-const VERSION = "?v=1.1.0";
+const VERSION = "?v=1.2.0";
 const CACHE = "background-bouncer-" + VERSION;
 const SHELL = [
   "./",
@@ -14,7 +14,7 @@ const SHELL = [
   "app.js" + VERSION,
   "cutout.js" + VERSION,
   "cutout-core.js" + VERSION,
-  "assets/sample-dog.jpg",
+  "assets/sample.jpg",
 ];
 
 addEventListener("install", (event) => {
