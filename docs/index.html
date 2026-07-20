@@ -35,14 +35,14 @@
       document.head.appendChild(m);
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=1.2.0">
+  <link rel="stylesheet" href="styles.css?v=1.2.1">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Background Bouncer",
     "applicationCategory": "MultimediaApplication",
-    "softwareVersion": "1.2.0",
+    "softwareVersion": "1.2.1",
     "operatingSystem": "Any (browser-based)",
     "url": "https://jaydenyoonzk.github.io/background-bouncer/",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -240,7 +240,7 @@
   </div>
 
   <h2 class="section-title" id="how"><span aria-hidden="true">🧠</span> How the vanishing works</h2>
-  <p>A photo does not say which pixels are the subject, so the tool asks a neural network. ISNet, the salient-object segmentation model from Xuebin Qin's <a class="doclink" href="https://github.com/xuebinqin/DIS" target="_blank" rel="noopener">Dichotomous Image Segmentation</a> research, looks at the whole picture and paints a probability map: this pixel is the dog, this pixel is the floor. It is one of the models the popular rembg tool ships, compressed small enough for a browser to hold.</p>
+  <p>A photo does not say which pixels are the subject, so the tool asks a neural network. ISNet, the salient-object segmentation model from Xuebin Qin's <a href="https://github.com/xuebinqin/DIS" target="_blank" rel="noopener">Dichotomous Image Segmentation</a> research, looks at the whole picture and paints a probability map: this pixel is the dog, this pixel is the floor. It is one of the models the popular rembg tool ships, compressed small enough for a browser to hold.</p>
   <p>The raw map is good, but its edges are only as sharp as a 1024-pixel canvas allows. So a second pass runs: a guided filter reads the actual edges of your photo at full detail and re-attaches the mask to them, which is how single hairs and whiskers make it into the cutout. A final curve snaps the sure areas fully solid or fully clear, leaving softness only where the photo itself is soft.</p>
   <p>Everything runs on ONNX Runtime compiled to WebAssembly, in a worker, so the page stays responsive while the network thinks. A photo takes a few seconds on a modern laptop.</p>
 
@@ -271,7 +271,7 @@
     <div class="faq-item">
     <h3 class="faq-q"><button type="button" id="faq-b4" aria-expanded="false" aria-controls="faq-a4"><span>Is my photo really not uploaded?</span><span class="faq-icon" aria-hidden="true"></span></button></h3>
     <div class="faq-a" id="faq-a4" role="region" aria-labelledby="faq-b4" hidden>
-      <div class="faq-a-inner"><p>Really. The page ships a Content Security Policy with <code>connect-src 'self'</code>, which makes the browser block every network request except the page's own files. You can verify it in your browser's network tab: process a photo and watch nothing leave. The <a class="doclink" href="https://github.com/JaydenYoonZK/background-bouncer" target="_blank" rel="noopener">source</a> is small enough to read, too.</p></div>
+      <div class="faq-a-inner"><p>Really. The page ships a Content Security Policy with <code>connect-src 'self'</code>, which makes the browser block every network request except the page's own files. You can verify it in your browser's network tab: process a photo and watch nothing leave. The <a href="https://github.com/JaydenYoonZK/background-bouncer" target="_blank" rel="noopener">source</a> is small enough to read, too.</p></div>
     </div>
     </div>
     <div class="faq-item">
@@ -287,7 +287,7 @@
 
   <footer>
     <div class="wrap">
-      <p>Built by <a class="doclink" href="https://github.com/JaydenYoonZK" target="_blank" rel="noopener">Jayden Yoon ZK</a> · <a class="doclink" href="https://github.com/JaydenYoonZK/background-bouncer" target="_blank" rel="noopener">Source</a> · <a class="doclink" href="https://github.com/JaydenYoonZK/background-bouncer/issues" target="_blank" rel="noopener">Report an issue</a> · <a class="doclink" href="https://jaydenyoonzk.github.io/projects/" target="_blank" rel="noopener">All projects</a></p>
+      <p>Built by <a href="https://github.com/JaydenYoonZK" target="_blank" rel="noopener">Jayden Yoon ZK</a> · <a href="https://github.com/JaydenYoonZK/background-bouncer" target="_blank" rel="noopener">Source</a> · <a href="https://github.com/JaydenYoonZK/background-bouncer/issues" target="_blank" rel="noopener">Report an issue</a> · <a href="https://jaydenyoonzk.github.io/projects/" target="_blank" rel="noopener">All projects</a></p>
       <p class="footnote">Model: ISNet (Apache-2.0) from the DIS project. Runtime: ONNX Runtime Web (MIT). Sample photo: Marliese Streefland, Unsplash.</p>
     </div>
   </footer>
@@ -297,6 +297,6 @@
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
 </button>
 
-<script type="module" src="app.js?v=1.2.0"></script>
+<script type="module" src="app.js?v=1.2.1"></script>
 </body>
 </html>

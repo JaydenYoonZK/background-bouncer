@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.1] - 2026-07-20
+
+### Fixed
+
+- Links no longer show an open-in-new icon on every link. That marker belongs only to document links inside a result, which this tool does not have, so the footer and prose links are plain again, matching the rest of the suite.
+
 ## [1.2.0] - 2026-07-20
 
 ### Fixed
