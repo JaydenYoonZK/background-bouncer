@@ -2,28 +2,28 @@
 
 // The engine: loads the segmentation model once, then turns any image into a
 // transparent PNG. Heavy math lives in cutout-core.js; the model file is
-// cached in the Cache API so the ~30 MB download happens once per version.
+// cached in the Cache API so the ~40 MB download happens once per version.
 
 import * as ort from "./vendor/ort.all.min.mjs";
 import {
-  MODEL_SIZE, normalizeImage, minMaxNormalize, guidedFilter,
+  MODEL_SIZE, normalizeImage, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
-} from "./cutout-core.js?v=1.3.1";
+} from "./cutout-core.js?v=2.0.0";
 
-const MODEL_URL = "./models/isnet-int8.onnx";
-const MODEL_CACHE = "bouncer-model-1";
+const MODEL_URL = "./models/birefnet-lite-512.onnx";
+const MODEL_CACHE = "bouncer-model-2";
 // The model's decompressed byte length. GitHub Pages gzips it on the wire, so
-// the Content-Length header is the compressed size (~30 MB) while the reader
+// the Content-Length header is the compressed size (~40 MB) while the reader
 // yields the full decompressed stream; dividing progress by this constant
 // keeps the bar from overshooting. Kept in sync with the file by a site test.
-const MODEL_BYTES = 46360717;
+const MODEL_BYTES = 80711696;
 
 // Single-threaded on purpose: GitHub Pages cannot send the isolation headers
-// multi-threaded wasm needs, and this int8 model does not parallelize on the
-// threaded build anyway (measured 0.99x), nor does WebGPU accept its quantized
-// ops yet. The proxy worker keeps the page responsive while the model thinks.
-// The real win is warming the download early (see app.js) so it is done before
-// the first run.
+// multi-threaded wasm needs, and BiRefNet's grid_sample op still trips the
+// WebGPU backend, so the portable wasm path is the one that runs everywhere.
+// The proxy worker keeps the page responsive while the model thinks. The real
+// win is warming the download early (see app.js) so it is done before the
+// first run.
 ort.env.wasm.numThreads = 1;
 ort.env.wasm.proxy = true;
 
@@ -141,12 +141,15 @@ export async function removeBackground(source, { width, height }, onProgress) {
   onProgress?.("model", 1);
 
   onProgress?.("refine", 0);
-  const matte1024 = minMaxNormalize(rawMatte);
+  // BiRefNet's head already ends in a sigmoid, so the raw output is a 0..1
+  // probability matte: use it as-is (unlike an unbounded head, min-max
+  // rescaling here would blow out a subject that fills the whole frame).
+  const matteModel = rawMatte;
 
   // Refine at a capped working size: the matte is stretched over the photo,
   // then the guided filter re-attaches it to the photo's own edges.
   const rs = refineSize(width, height);
-  const matteWork = resizePlane(matte1024, MODEL_SIZE, MODEL_SIZE, rs.w, rs.h);
+  const matteWork = resizePlane(matteModel, MODEL_SIZE, MODEL_SIZE, rs.w, rs.h);
   const { ctx: workCtx } = drawToCanvas(source, rs.w, rs.h);
   const workRgba = workCtx.getImageData(0, 0, rs.w, rs.h).data;
   const guide = luminance(workRgba, rs.w * rs.h);

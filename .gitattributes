@@ -1,0 +1,2 @@
+# The model is a binary blob; never let git line-diff, merge, or EOL-normalize it.
+*.onnx binary

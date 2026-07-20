@@ -35,14 +35,14 @@
       document.head.appendChild(m);
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=1.3.1">
+  <link rel="stylesheet" href="styles.css?v=2.0.0">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Background Bouncer",
     "applicationCategory": "MultimediaApplication",
-    "softwareVersion": "1.3.1",
+    "softwareVersion": "2.0.0",
     "operatingSystem": "Any (browser-based)",
     "url": "https://jaydenyoonzk.github.io/background-bouncer/",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -133,7 +133,7 @@
       <h1>The background's not on the list.</h1>
       <p class="lede">Drop in a photo and the bouncer checks the guest list: your subject stays, down to the last strand of hair, fur, or whisker, and everything behind it gets walked to the door. What comes back is a clean transparent PNG, ready for a new backdrop, a thumbnail, or a sticker.</p>
       <p class="lede lede-kick">No uploads. No accounts. No line. The whole door runs on your device. 🕴️</p>
-      <p class="privacy"><span class="privacy-lock" aria-hidden="true">🔒</span><span>Runs entirely in your browser. Your photo is never uploaded or stored: no requests, no analytics. The model downloads once (about 30&nbsp;MB) and works offline after that.</span></p>
+      <p class="privacy"><span class="privacy-lock" aria-hidden="true">🔒</span><span>Runs entirely in your browser. Your photo is never uploaded or stored: no requests, no analytics. The model downloads once (about 40&nbsp;MB) and works offline after that.</span></p>
     </div>
     <div class="hero-art" aria-hidden="true">
       <svg viewBox="0 0 320 272" xmlns="http://www.w3.org/2000/svg" fill="none">
@@ -192,7 +192,7 @@
       <div class="toolbar dropwell-actions">
         <button id="upload" class="primary" type="button" aria-label="Upload a photo" data-tip="Pick a photo from your files">Upload a photo</button>
       </div>
-      <p class="dropwell-note">JPG, PNG, or WebP. The first run downloads the model (about 30&nbsp;MB), then it is cached for offline use.</p>
+      <p class="dropwell-note">JPG, PNG, or WebP. The first run downloads the model (about 40&nbsp;MB), then it is cached for offline use.</p>
       <button id="sample" class="sample-card" type="button" aria-label="Try the sample photo: The Girl on the Boat, shot by Jayden">
         <img class="sample-thumb" src="./assets/sample.jpg" alt="" width="96" height="84">
         <span class="sample-card-text">
@@ -240,9 +240,9 @@
   </div>
 
   <h2 class="section-title" id="how"><span aria-hidden="true">🧠</span> How the vanishing works</h2>
-  <p>A photo does not say which pixels are the subject, so the tool asks a neural network. ISNet, the salient-object segmentation model from Xuebin Qin's <a href="https://github.com/xuebinqin/DIS" target="_blank" rel="noopener">Dichotomous Image Segmentation</a> research, looks at the whole picture and paints a probability map: this pixel is the dog, this pixel is the floor. It is one of the models the popular rembg tool ships, compressed small enough for a browser to hold.</p>
-  <p>The raw map is good, but its edges are only as sharp as a 1024-pixel canvas allows. So a second pass runs: a guided filter reads the actual edges of your photo at full detail and re-attaches the mask to them, which is how single hairs and whiskers make it into the cutout. A final curve snaps the sure areas fully solid or fully clear, leaving softness only where the photo itself is soft.</p>
-  <p>Everything runs on ONNX Runtime compiled to WebAssembly, in a worker, so the page stays responsive while the network thinks. A photo takes a few seconds on a modern laptop.</p>
+  <p>A photo does not say which pixels are the subject, so the tool asks a neural network. BiRefNet, the high-resolution segmentation model from Zheng Peng and colleagues' <a href="https://github.com/ZhengPeng7/BiRefNet" target="_blank" rel="noopener">Bilateral Reference</a> research, studies the whole picture and paints a probability map: this pixel is the dog, this pixel is the floor. It is unusually good at the hard cases, a pale hand against pale wood or a single strand against a bright sky, where a lighter model gives up and leaves a smudge.</p>
+  <p>The map is sharp, but the model reads your photo on a square working canvas, so its edges are only as fine as that canvas allows. A second pass fixes this: a guided filter reads the actual edges of your photo at full detail and re-attaches the mask to them, which is how single hairs and whiskers make it into the cutout. A final curve snaps the sure areas fully solid or fully clear, leaving softness only where the photo itself is soft.</p>
+  <p>Everything runs on ONNX Runtime compiled to WebAssembly, in a worker, so the page stays responsive while the network thinks. A photo takes several seconds on a modern laptop, a little longer on a phone: the model is studying every pixel on your own processor, not a server farm.</p>
 
   <h2 class="section-title" id="private"><span aria-hidden="true">🔒</span> Private by construction</h2>
   <p>Background removal sites usually mean uploading your photo to someone's server. This one cannot upload anything: the page's Content Security Policy sets <code>connect-src 'self'</code>, so the browser itself refuses any request except fetching the page's own files. Family photos, ID pictures, unreleased product shots: they all stay in your RAM and nowhere else.</p>
@@ -259,7 +259,7 @@
     <div class="faq-item">
     <h3 class="faq-q"><button type="button" id="faq-b2" aria-expanded="false" aria-controls="faq-a2"><span>Does it handle hair and fur?</span><span class="faq-icon" aria-hidden="true"></span></button></h3>
     <div class="faq-a" id="faq-a2" role="region" aria-labelledby="faq-b2" hidden>
-      <div class="faq-a-inner"><p>Yes, that is the point of the second pass. The neural network gets the shape right, and the guided filter re-cuts the edge against the full-resolution photo, so strands that are thinner than the model's canvas still survive. Try the sample: the hat brim and loose hair against the soft, misty lake are exactly this problem.</p></div>
+      <div class="faq-a-inner"><p>Yes, that is the point of the second pass. The neural network gets the shape right, and the guided filter re-cuts the edge against the full-resolution photo, so strands that are thinner than the model's canvas still survive. Try the sample: the hat brim, the wool knit, and her hands resting on the wooden boat rim, all against a soft misty lake, are exactly this problem.</p></div>
     </div>
     </div>
     <div class="faq-item">
@@ -271,7 +271,7 @@
     <div class="faq-item">
     <h3 class="faq-q"><button type="button" id="faq-b3" aria-expanded="false" aria-controls="faq-a3"><span>Why is the first run slow?</span><span class="faq-icon" aria-hidden="true"></span></button></h3>
     <div class="faq-a" id="faq-a3" role="region" aria-labelledby="faq-b3" hidden>
-      <div class="faq-a-inner"><p>The first run downloads the neural network (about 30&nbsp;MB). It goes into your browser's cache, so every run after that skips the download, works offline, and takes a few seconds: the time the network needs to look at your photo on your own processor.</p></div>
+      <div class="faq-a-inner"><p>The first run downloads the neural network (about 40&nbsp;MB). It goes into your browser's cache, so every run after that skips the download, works offline, and takes several seconds: the time the network needs to study your photo on your own processor.</p></div>
     </div>
     </div>
     <div class="faq-item">
@@ -294,7 +294,7 @@
   <footer>
     <div class="wrap">
       <p>Built by <a href="https://github.com/JaydenYoonZK" target="_blank" rel="noopener">Jayden Yoon ZK</a> · <a href="https://github.com/JaydenYoonZK/background-bouncer" target="_blank" rel="noopener">Source</a> · <a href="https://github.com/JaydenYoonZK/background-bouncer/issues" target="_blank" rel="noopener">Report an issue</a> · <a href="https://jaydenyoonzk.github.io/projects/" target="_blank" rel="noopener">All projects</a></p>
-      <p class="footnote">Model: ISNet (Apache-2.0) from the DIS project. Runtime: ONNX Runtime Web (MIT). Sample photo: Marliese Streefland, Unsplash.</p>
+      <p class="footnote">Model: BiRefNet (MIT) by Zheng Peng et al. Runtime: ONNX Runtime Web (MIT). Sample photo by Jayden Yoon ZK.</p>
     </div>
   </footer>
 </main>
@@ -303,6 +303,6 @@
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
 </button>
 
-<script type="module" src="app.js?v=1.3.1"></script>
+<script type="module" src="app.js?v=2.0.0"></script>
 </body>
 </html>

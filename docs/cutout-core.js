@@ -4,36 +4,26 @@
 // so it runs and tests the same in Node and in the browser. The model I/O
 // lives in cutout.js.
 
-export const MODEL_SIZE = 1024;
+export const MODEL_SIZE = 512;
+
+// BiRefNet reads ImageNet-normalized RGB. Per-channel: (v/255 - mean) / std.
+const IMAGENET_MEAN = [0.485, 0.456, 0.406];
+const IMAGENET_STD = [0.229, 0.224, 0.225];
 
 // The model was trained on squashed square inputs (the reference pipeline
 // resizes without preserving aspect), so the tool does the same and the
-// matte is stretched back over the original frame afterwards.
+// matte is stretched back over the original frame afterwards. The three
+// channels are laid out planar (all R, then all G, then all B) as the net
+// expects, each centered and scaled by the ImageNet statistics.
 export function normalizeImage(rgba, size) {
   const plane = size * size;
   const x = new Float32Array(3 * plane);
   for (let i = 0; i < plane; i++) {
-    x[i] = rgba[i * 4] / 255 - 0.5;
-    x[plane + i] = rgba[i * 4 + 1] / 255 - 0.5;
-    x[2 * plane + i] = rgba[i * 4 + 2] / 255 - 0.5;
+    x[i] = (rgba[i * 4] / 255 - IMAGENET_MEAN[0]) / IMAGENET_STD[0];
+    x[plane + i] = (rgba[i * 4 + 1] / 255 - IMAGENET_MEAN[1]) / IMAGENET_STD[1];
+    x[2 * plane + i] = (rgba[i * 4 + 2] / 255 - IMAGENET_MEAN[2]) / IMAGENET_STD[2];
   }
   return x;
-}
-
-// The raw head output is unbounded; the reference pipeline rescales each
-// image's own range to 0..1, which is what makes thin wisps survive.
-export function minMaxNormalize(m) {
-  let mn = Infinity, mx = -Infinity;
-  for (let i = 0; i < m.length; i++) {
-    const v = m[i];
-    if (v < mn) mn = v;
-    if (v > mx) mx = v;
-  }
-  const range = mx - mn;
-  const out = new Float32Array(m.length);
-  if (range < 1e-6) return out;
-  for (let i = 0; i < m.length; i++) out[i] = (m[i] - mn) / range;
-  return out;
 }
 
 // O(n) box blur: running-sum rows then columns, edge-clamped so borders

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  MODEL_SIZE, normalizeImage, minMaxNormalize, boxBlur, guidedFilter,
+  MODEL_SIZE, normalizeImage, boxBlur, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
 } from "../docs/cutout-core.js";
 
@@ -61,35 +61,22 @@ test("boxBlur preserves the mean of the plane", () => {
   assert.ok(Math.abs(mean([...src]) - mean([...out])) < 0.02);
 });
 
-/* ---- min-max normalize ---- */
-
-test("minMaxNormalize maps the range to exactly 0..1", () => {
-  const m = new Float32Array([2, 4, 6, 8]);
-  const out = minMaxNormalize(m);
-  assert.equal(out[0], 0);
-  assert.equal(out[3], 1);
-  assert.ok(Math.abs(out[1] - 1 / 3) < 1e-6);
-});
-
-test("minMaxNormalize of a flat plane returns zeros instead of dividing by zero", () => {
-  const out = minMaxNormalize(new Float32Array([5, 5, 5]));
-  assert.deepEqual([...out], [0, 0, 0]);
-});
-
 /* ---- input normalization ---- */
 
-test("normalizeImage lays out planar CHW and centers at zero", () => {
+test("normalizeImage lays out planar CHW with ImageNet stats", () => {
   const size = 2;
   const rgba = new Uint8ClampedArray([
     255, 0, 0, 255, 0, 255, 0, 255,
     0, 0, 255, 255, 128, 128, 128, 255,
   ]);
   const x = normalizeImage(rgba, size);
+  const mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225];
+  const norm = (v, c) => (v / 255 - mean[c]) / std[c];
   assert.equal(x.length, 12);
-  assert.ok(Math.abs(x[0] - 0.5) < 1e-6);        // R of pixel 0: 255 -> +0.5
-  assert.ok(Math.abs(x[4 + 1] - 0.5) < 1e-6);    // G plane, pixel 1: 255 -> +0.5
-  assert.ok(Math.abs(x[8 + 2] - 0.5) < 1e-6);    // B plane, pixel 2: 255 -> +0.5
-  assert.ok(Math.abs(x[8 + 3] - (128 / 255 - 0.5)) < 1e-6);
+  assert.ok(Math.abs(x[0] - norm(255, 0)) < 1e-6);      // R plane, pixel 0
+  assert.ok(Math.abs(x[4 + 1] - norm(255, 1)) < 1e-6);  // G plane, pixel 1
+  assert.ok(Math.abs(x[8 + 2] - norm(255, 2)) < 1e-6);  // B plane, pixel 2
+  assert.ok(Math.abs(x[8 + 3] - norm(128, 2)) < 1e-6);  // B plane, pixel 3
 });
 
 /* ---- guided filter ---- */
@@ -217,5 +204,5 @@ test("luminance uses the Rec. 601 weights", () => {
 });
 
 test("MODEL_SIZE matches the model's static input", () => {
-  assert.equal(MODEL_SIZE, 1024);
+  assert.equal(MODEL_SIZE, 512);
 });

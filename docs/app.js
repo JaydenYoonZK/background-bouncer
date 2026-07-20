@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, loadSession } from "./cutout.js?v=1.3.1";
+import { removeBackground, loadSession } from "./cutout.js?v=2.0.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -272,7 +272,7 @@ sampleBtn.addEventListener("pointerenter", warm);
 sampleBtn.addEventListener("focus", warm);
 addEventListener("dragenter", (e) => { if (isFileDrag(e)) warm(); });
 // The first sign of engagement starts the model download in the background, so
-// the ~30 MB is on its way while the visitor reads. By the time they click, the
+// the ~40 MB is on its way while the visitor reads. By the time they click, the
 // only wait left is the model thinking, not the download. One-shot, passive,
 // and skipped for visitors who never interact so a bounce costs no bandwidth.
 ["pointermove", "scroll", "keydown", "touchstart"].forEach((ev) =>

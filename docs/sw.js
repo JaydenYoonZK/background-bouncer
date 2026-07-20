@@ -4,7 +4,7 @@
    requests pass through untouched. The cache name carries the release version
    and old caches are dropped on activate. */
 
-const VERSION = "?v=1.3.1";
+const VERSION = "?v=2.0.0";
 const CACHE = "background-bouncer-" + VERSION;
 const SHELL = [
   "./",
@@ -28,7 +28,7 @@ addEventListener("activate", (event) => {
     caches.keys()
       // Only drop this shell's own old versions. The model lives in its own
       // cache (bouncer-model-*) that cutout.js owns, so a version bump must not
-      // wipe it and force a 44 MB re-download.
+      // wipe it and force a 40 MB re-download.
       .then((keys) => Promise.all(keys.filter((key) => key.startsWith("background-bouncer-") && key !== CACHE).map((key) => caches.delete(key))))
       .then(() => clients.claim())
   );
