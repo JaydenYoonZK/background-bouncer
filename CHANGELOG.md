@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.1] - 2026-07-20
+
+### Fixed
+
+- Very large photos no longer risk a blank export or a crashed tab. A phone camera can shoot 48 megapixels, past the canvas size a mobile browser will hold, so the output is now bounded to a safe area while keeping the aspect ratio. Ordinary photos are unaffected; only very large ones are scaled down, which is invisible for web use.
+
 ## [1.0.0] - 2026-07-20
 
 ### Added

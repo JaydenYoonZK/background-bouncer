@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   MODEL_SIZE, normalizeImage, minMaxNormalize, boxBlur, guidedFilter,
-  luminance, crispen, refineSize, applyAlpha,
+  luminance, crispen, refineSize, outputSize, applyAlpha,
 } from "../docs/cutout-core.js";
 
 /* ---- the reference implementations these must match ---- */
@@ -159,6 +159,18 @@ test("refineSize passes small images through and caps big ones", () => {
 test("refineSize never rounds a degenerate aspect ratio to zero", () => {
   assert.deepEqual(refineSize(8192, 1), { w: 2048, h: 1, scale: 0.25 });
   assert.deepEqual(refineSize(1, 8192), { w: 1, h: 2048, scale: 0.25 });
+});
+
+test("outputSize passes normal photos through and caps huge ones under the canvas ceiling", () => {
+  // a 12MP phone photo is under the cap: returned untouched
+  assert.deepEqual(outputSize(4032, 3024), { w: 4032, h: 3024, scale: 1 });
+  // a 48MP photo is scaled to <= 16M pixels, aspect kept
+  const r = outputSize(8000, 6000);
+  assert.ok(r.w * r.h <= 16000000, `area ${r.w * r.h} must be under the ceiling`);
+  assert.ok(Math.abs(r.w / r.h - 8000 / 6000) < 0.01, "aspect ratio preserved");
+  // a giant square never exceeds the ceiling on either axis
+  const sq = outputSize(10000, 10000);
+  assert.ok(sq.w * sq.h <= 16000000 && sq.w >= 1 && sq.h >= 1);
 });
 
 test("applyAlpha writes only the alpha channel", () => {

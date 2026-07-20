@@ -132,6 +132,19 @@ export function refineSize(w, h, cap = 2048) {
   return { w: Math.max(1, Math.round(w * scale)), h: Math.max(1, Math.round(h * scale)), scale };
 }
 
+// The size of the returned PNG. A phone camera shoots 12 to 48 megapixels, and
+// a canvas past roughly 16.7M pixels blows through iOS Safari's ceiling: the
+// canvas comes back blank and the export fails, or a low-memory tab crashes.
+// So the output area is bounded while the aspect ratio is kept. The common case
+// (a 12MP photo, ~12.2M pixels) is under the cap and passes through untouched;
+// only very large images are scaled down, which is invisible for web use.
+export function outputSize(w, h, maxArea = 16000000) {
+  if (w * h <= maxArea) return { w, h, scale: 1 };
+  const scale = Math.sqrt(maxArea / (w * h));
+  // Floor, not round, so the capped area is always at or under the ceiling.
+  return { w: Math.max(1, Math.floor(w * scale)), h: Math.max(1, Math.floor(h * scale)), scale };
+}
+
 // Writes the alpha plane into an RGBA buffer in place.
 export function applyAlpha(rgba, matte, n) {
   for (let i = 0; i < n; i++) {

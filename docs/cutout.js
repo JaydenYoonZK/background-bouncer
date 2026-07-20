@@ -7,8 +7,8 @@
 import * as ort from "./vendor/ort.all.min.mjs";
 import {
   MODEL_SIZE, normalizeImage, minMaxNormalize, guidedFilter,
-  luminance, crispen, refineSize, applyAlpha,
-} from "./cutout-core.js?v=1.0.0";
+  luminance, crispen, refineSize, outputSize, applyAlpha,
+} from "./cutout-core.js?v=1.0.1";
 
 const MODEL_URL = "./models/isnet-int8.onnx";
 const MODEL_CACHE = "bgb-model-1";
@@ -152,15 +152,19 @@ export async function removeBackground(source, { width, height }, onProgress) {
   onProgress?.("refine", 1);
 
   onProgress?.("encode", 0);
-  const matteFull = rs.scale === 1 ? crisp : resizePlane(crisp, rs.w, rs.h, width, height);
-  const { canvas: outCanvas, ctx: outCtx } = drawToCanvas(source, width, height, "display-p3");
+  // Bound the output canvas so a huge phone photo cannot exceed a mobile
+  // browser's canvas ceiling (a blank export) or run the tab out of memory.
+  const os = outputSize(width, height);
+  const outW = os.w, outH = os.h;
+  const matteFull = outW === rs.w && outH === rs.h ? crisp : resizePlane(crisp, rs.w, rs.h, outW, outH);
+  const { canvas: outCanvas, ctx: outCtx } = drawToCanvas(source, outW, outH, "display-p3");
   const space = outputColorSpace(outCtx);
-  const outImage = outCtx.getImageData(0, 0, width, height, { colorSpace: space });
-  applyAlpha(outImage.data, matteFull, width * height);
+  const outImage = outCtx.getImageData(0, 0, outW, outH, { colorSpace: space });
+  applyAlpha(outImage.data, matteFull, outW * outH);
   outCtx.putImageData(outImage, 0, 0);
   const blob = await new Promise((resolve, reject) => {
     outCanvas.toBlob((b) => (b ? resolve(b) : reject(new Error("PNG encoding failed."))), "image/png");
   });
   onProgress?.("encode", 1);
-  return { blob, width, height };
+  return { blob, width: outW, height: outH };
 }

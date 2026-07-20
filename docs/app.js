@@ -1,5 +1,5 @@
 /*! Background Begone | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-begone */
-import { removeBackground, loadSession } from "./cutout.js?v=1.0.0";
+import { removeBackground, loadSession } from "./cutout.js?v=1.0.1";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
