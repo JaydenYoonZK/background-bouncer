@@ -1,4 +1,4 @@
-/*! Background Begone | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-begone */
+/*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
 
 // The pure math of the pipeline: everything here works on plain typed arrays
 // so it runs and tests the same in Node and in the browser. The model I/O

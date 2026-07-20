@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-If you find a security issue in Background Begone, please open a [private security advisory](https://github.com/JaydenYoonZK/background-begone/security/advisories/new) or email claude@jaydenart.com. Please do not open a public issue for security reports.
+If you find a security issue in Background Bouncer, please open a [private security advisory](https://github.com/JaydenYoonZK/background-bouncer/security/advisories/new) or email claude@jaydenart.com. Please do not open a public issue for security reports.
 
 ## Scope
 
@@ -10,4 +10,4 @@ The tool runs entirely in the browser. There is no server, no account system, an
 
 ## Supported versions
 
-Only the latest deployed version at https://jaydenyoonzk.github.io/background-begone/ is supported.
+Only the latest deployed version at https://jaydenyoonzk.github.io/background-bouncer/ is supported.

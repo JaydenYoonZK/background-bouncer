@@ -1,4 +1,4 @@
-/*! Background Begone | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-begone */
+/*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
 /* Shared behavior for the 404 page: the same theme toggle, ambient scene
    parallax, and cursor dust the tool page uses, without any tool logic. */
 
@@ -202,7 +202,7 @@ if (siteNav) {
 // tool opens without a connection after the first visit.
 if ("serviceWorker" in navigator) {
   addEventListener("load", () => {
-    navigator.serviceWorker.register("/background-begone/sw.js").catch(() => { /* offline support is optional */ });
+    navigator.serviceWorker.register("/background-bouncer/sw.js").catch(() => { /* offline support is optional */ });
   });
 }
 

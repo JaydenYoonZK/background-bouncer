@@ -1,11 +1,11 @@
-/*! Background Begone | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-begone */
+/*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
 /* Offline support. The shell is precached at install, same-origin requests
    are answered from cache and refreshed in the background, and cross-origin
    requests pass through untouched. The cache name carries the release version
    and old caches are dropped on activate. */
 
-const VERSION = "?v=1.0.1";
-const CACHE = "background-begone-" + VERSION;
+const VERSION = "?v=1.1.0";
+const CACHE = "background-bouncer-" + VERSION;
 const SHELL = [
   "./",
   "404.html",
@@ -27,9 +27,9 @@ addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
       // Only drop this shell's own old versions. The model lives in its own
-      // cache (bgb-model-*) that cutout.js owns, so a version bump must not
+      // cache (bouncer-model-*) that cutout.js owns, so a version bump must not
       // wipe it and force a 44 MB re-download.
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("background-begone-") && key !== CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("background-bouncer-") && key !== CACHE).map((key) => caches.delete(key))))
       .then(() => clients.claim())
   );
 });

@@ -1,4 +1,4 @@
-/*! Background Begone | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-begone */
+/*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
 :root {
   color-scheme: dark;
   --bg: #0d0c0a;
@@ -1707,7 +1707,7 @@ button.cp-eye:hover, button.cp-eye:active { box-shadow: none; transform: none; b
 }
 
 
-/* ---- Background Begone: the drop well and progress ---- */
+/* ---- Background Bouncer: the drop well and progress ---- */
 .dropwell {
   border: 2px dashed var(--line-strong); border-radius: var(--radius);
   padding: 28px 20px 22px; text-align: center;

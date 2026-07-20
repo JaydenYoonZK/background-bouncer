@@ -1,5 +1,5 @@
-/*! Background Begone | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-begone */
-import { removeBackground, loadSession } from "./cutout.js?v=1.0.1";
+/*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
+import { removeBackground, loadSession } from "./cutout.js?v=1.1.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -94,11 +94,11 @@ let resultName = "cutout.png";
 let busy = false;
 
 const STAGE_LABELS = {
-  download: (p) => `Summoning the model… ${Math.round(p * 100)}%`,
-  compile: () => "Warming up the wand…",
-  model: () => "Finding your subject…",
-  refine: () => "Perfecting the edges…",
-  encode: () => "Wrapping your PNG…",
+  download: (p) => `Sizing up the crowd… ${Math.round(p * 100)}%`,
+  compile: () => "Cracking the knuckles…",
+  model: () => "Checking the guest list…",
+  refine: () => "Escorting the background out…",
+  encode: () => "Stamping your hand…",
 };
 
 function showProgress(stage, p) {
@@ -775,7 +775,7 @@ document.querySelectorAll(".faq-q button").forEach((btn) => {
 
 if ("serviceWorker" in navigator) {
   addEventListener("load", () => {
-    navigator.serviceWorker.register("/background-begone/sw.js").catch(() => { /* offline support is optional */ });
+    navigator.serviceWorker.register("/background-bouncer/sw.js").catch(() => { /* offline support is optional */ });
   });
 }
 

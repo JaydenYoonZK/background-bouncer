@@ -1,4 +1,4 @@
-/*! Background Begone | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-begone */
+/*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
 
 // The engine: loads the segmentation model once, then turns any image into a
 // transparent PNG. Heavy math lives in cutout-core.js; the model file is
@@ -8,10 +8,10 @@ import * as ort from "./vendor/ort.all.min.mjs";
 import {
   MODEL_SIZE, normalizeImage, minMaxNormalize, guidedFilter,
   luminance, crispen, refineSize, outputSize, applyAlpha,
-} from "./cutout-core.js?v=1.0.1";
+} from "./cutout-core.js?v=1.1.0";
 
 const MODEL_URL = "./models/isnet-int8.onnx";
-const MODEL_CACHE = "bgb-model-1";
+const MODEL_CACHE = "bouncer-model-1";
 // The model's decompressed byte length. GitHub Pages gzips it on the wire, so
 // the Content-Length header is the compressed size (~30 MB) while the reader
 // yields the full decompressed stream; dividing progress by this constant

@@ -1,8 +1,8 @@
-# 🪄 Background Begone
+# 🪄 Background Bouncer
 
 **Remove the background from any photo, in your browser. The picture never leaves your device.**
 
-**[Try it now →](https://jaydenyoonzk.github.io/background-begone/)**
+**[Try it now →](https://jaydenyoonzk.github.io/background-bouncer/)**
 
 Drop in a photo and a neural network lifts the subject out: hair, fur, whiskers and all. What comes back is a clean transparent PNG, ready for a new backdrop, a thumbnail, or a sticker. No uploads, no accounts, no watermarks.
 

@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] - 2026-07-20
+
+### Changed
+
+- Renamed to Background Bouncer. The bouncer checks the guest list: your subject is on it and stays, the background is not and gets walked to the door. The name says what the tool does at a glance, and it is easier to find. The copy across the page now speaks in that voice.
+
 ## [1.0.1] - 2026-07-20
 
 ### Fixed
