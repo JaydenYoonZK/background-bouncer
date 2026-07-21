@@ -9,7 +9,7 @@
 </p>
 
 <a href="https://jaydenyoonzk.github.io/background-bouncer/">
-  <img src="docs/assets/preview.png" alt="Background Bouncer shown in light and dark themes, the hero with its transparent-PNG cutout illustration" width="100%">
+  <img src="docs/assets/preview.png" alt="Background Bouncer shown in light and dark themes, the hero for the in-browser background remover" width="100%">
 </a>
 
 **[Try it now →](https://jaydenyoonzk.github.io/background-bouncer/)**
@@ -52,7 +52,7 @@ The interesting files:
 | `docs/cutout-core.js` | The pure math: box blur, guided filter, matte shaping. Fully unit-tested. |
 | `docs/cutout.js` | Model loading (with Cache API), inference, and the PNG pipeline. |
 | `docs/app.js` | The page: drop/paste/upload, progress, compare wipe, download. |
-| `docs/models/birefnet-lite-512.onnx` | BiRefNet_lite, re-exported at 512×512 and quantized to int8 (81 MB). |
+| `docs/models/birefnet-lite-512.onnx` | BiRefNet_lite, re-exported at 512×512 and quantized to int8 (about 40 MB gzipped, 81 MB on disk). |
 
 ## 📜 Licenses and credits
 
