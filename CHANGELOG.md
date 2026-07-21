@@ -3,6 +3,29 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.0.2] - 2026-07-21
+
+### Changed
+
+- The sample is a sharper, more vivid frame of the boat scene. The stronger separation between the green dress and the boat gives the cleanest cut of the set: both hands kept, no boat rim left behind.
+
+## [2.0.1] - 2026-07-21
+
+### Changed
+
+- The sample is a higher-resolution, higher-contrast frame of the same scene, cropped square to fill the card, for an even cleaner cutout.
+
+## [2.0.0] - 2026-07-21
+
+### Changed
+
+- New engine. The cutout now runs on BiRefNet, a high-resolution segmentation model that tells subject from background far more precisely than the previous salient-object model. Low-contrast detail a lighter model gives up on, like a pale hand resting on pale wood, now comes out whole instead of as a smudge.
+- The model is re-exported to a 512x512 ONNX and quantized to int8: about 40 MB gzipped, downloaded once and cached for offline use. Input normalization moved to ImageNet statistics.
+
+### Added
+
+- A new sample photo, framed on the subject, that shows off the sharper cut.
+
 ## [1.3.1] - 2026-07-20
 
 ### Fixed
