@@ -8,7 +8,7 @@ import * as ort from "./vendor/ort.all.min.mjs";
 import {
   MODEL_SIZE, normalizeImage, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
-} from "./cutout-core.js?v=2.0.0";
+} from "./cutout-core.js?v=2.0.1";
 
 const MODEL_URL = "./models/birefnet-lite-512.onnx";
 const MODEL_CACHE = "bouncer-model-2";
