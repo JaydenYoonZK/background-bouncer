@@ -2,6 +2,16 @@
 
 **Remove the background from any photo, in your browser. The picture never leaves your device.**
 
+<p>
+  <a href="https://jaydenyoonzk.github.io/background-bouncer/"><img src="https://img.shields.io/badge/Live%20tool-open-abcf37?style=for-the-badge&logo=githubpages&logoColor=black" alt="Open the live tool"></a>
+  <a href="https://github.com/JaydenYoonZK/background-bouncer/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/JaydenYoonZK/background-bouncer/ci.yml?style=for-the-badge&label=tests" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/JaydenYoonZK/background-bouncer?style=for-the-badge" alt="MIT License"></a>
+</p>
+
+<a href="https://jaydenyoonzk.github.io/background-bouncer/">
+  <img src="docs/assets/preview.png" alt="Background Bouncer shown in light and dark themes, the hero with its transparent-PNG cutout illustration" width="100%">
+</a>
+
 **[Try it now →](https://jaydenyoonzk.github.io/background-bouncer/)**
 
 Drop in a photo and a neural network lifts the subject out: hair, fur, whiskers and all. What comes back is a clean transparent PNG, ready for a new backdrop, a thumbnail, or a sticker. No uploads, no accounts, no watermarks.
