@@ -4,7 +4,7 @@
 // so it runs and tests the same in Node and in the browser. The model I/O
 // lives in cutout.js.
 
-export const MODEL_SIZE = 512;
+export const MODEL_SIZE = 384;
 
 // BiRefNet reads ImageNet-normalized RGB. Per-channel: (v/255 - mean) / std.
 const IMAGENET_MEAN = [0.485, 0.456, 0.406];

@@ -50,19 +50,19 @@ test("the page ships no inline event handlers or scripts beyond the theme boot",
 });
 
 test("the model and runtime files are in place and under GitHub's limit", () => {
-  for (const f of ["docs/models/birefnet-lite-512.onnx", "docs/vendor/ort.all.min.mjs", "docs/vendor/ort-wasm-simd-threaded.jsep.wasm"]) {
+  for (const f of ["docs/models/birefnet-lite-384.onnx", "docs/vendor/ort.all.min.mjs", "docs/vendor/ort-wasm-simd-threaded.jsep.wasm"]) {
     assert.ok(existsSync(join(root, f)), `${f} exists`);
   }
   const { statSync } = await_import_stat();
   function await_import_stat() { return { statSync: (p) => ({ size: readFileSync(p).length }) }; }
-  const size = statSync(join(root, "docs/models/birefnet-lite-512.onnx")).size;
+  const size = statSync(join(root, "docs/models/birefnet-lite-384.onnx")).size;
   assert.ok(size < 100 * 1024 * 1024, "model under 100 MB");
   assert.ok(size > 10 * 1024 * 1024, "model looks complete");
 });
 
 test("MODEL_BYTES matches the actual model file", () => {
   const declared = +cutout.match(/const MODEL_BYTES = (\d+);/)[1];
-  const actual = readFileSync(join(root, "docs/models/birefnet-lite-512.onnx")).length;
+  const actual = readFileSync(join(root, "docs/models/birefnet-lite-384.onnx")).length;
   assert.equal(declared, actual, "MODEL_BYTES must equal the model's on-disk size for honest progress");
 });
 

@@ -8,15 +8,15 @@ import * as ort from "./vendor/ort.all.min.mjs";
 import {
   MODEL_SIZE, normalizeImage, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
-} from "./cutout-core.js?v=2.0.2";
+} from "./cutout-core.js?v=2.1.0";
 
-const MODEL_URL = "./models/birefnet-lite-512.onnx";
-const MODEL_CACHE = "bouncer-model-2";
+const MODEL_URL = "./models/birefnet-lite-384.onnx";
+const MODEL_CACHE = "bouncer-model-3";
 // The model's decompressed byte length. GitHub Pages gzips it on the wire, so
 // the Content-Length header is the compressed size (~40 MB) while the reader
 // yields the full decompressed stream; dividing progress by this constant
 // keeps the bar from overshooting. Kept in sync with the file by a site test.
-const MODEL_BYTES = 80711696;
+const MODEL_BYTES = 66518452;
 
 // Single-threaded on purpose: GitHub Pages cannot send the isolation headers
 // multi-threaded wasm needs, and BiRefNet's grid_sample op still trips the
@@ -26,6 +26,14 @@ const MODEL_BYTES = 80711696;
 // first run.
 ort.env.wasm.numThreads = 1;
 ort.env.wasm.proxy = true;
+
+// Drop model caches from earlier versions so swapping the model file never
+// leaves the previous blob orphaned in the visitor's browser.
+if (typeof caches !== "undefined") {
+  caches.keys().then((keys) => keys.forEach((k) => {
+    if (k.startsWith("bouncer-model-") && k !== MODEL_CACHE) caches.delete(k);
+  })).catch(() => { /* private mode may block the Cache API */ });
+}
 
 let sessionPromise = null;
 // The live progress sink. warm() starts the download with none; a real run

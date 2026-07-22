@@ -204,5 +204,5 @@ test("luminance uses the Rec. 601 weights", () => {
 });
 
 test("MODEL_SIZE matches the model's static input", () => {
-  assert.equal(MODEL_SIZE, 512);
+  assert.equal(MODEL_SIZE, 384);
 });

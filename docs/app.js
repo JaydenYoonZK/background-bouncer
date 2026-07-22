@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, loadSession } from "./cutout.js?v=2.0.2";
+import { removeBackground, loadSession } from "./cutout.js?v=2.1.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
