@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   MODEL_SIZE, normalizeImage, boxBlur, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
+  removeSmallIslands,
 } from "../docs/cutout-core.js";
 
 /* ---- the reference implementations these must match ---- */
@@ -167,6 +168,26 @@ test("defringe drops the faint ring but keeps solid and true-soft pixels", () =>
   assert.ok(out[2] < 0.3 && out[2] > 0); // in the ramp: reduced, not killed
   assert.ok(Math.abs(out[3] - 0.6) < 1e-6); // above 2t: untouched
   assert.equal(out[4], 1);              // solid stays solid
+});
+
+test("removeSmallIslands drops a stray speck but keeps the subject and a second mass", () => {
+  const w = 40, h = 40;
+  const m = new Float32Array(w * h);
+  const fill = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) m[y * w + x] = 1; };
+  fill(2, 2, 22, 22);    // subject: 400 px (the largest mass)
+  fill(28, 28, 36, 36);  // a second sizeable mass: 64 px, must survive
+  m[5 * w + 38] = 1;      // a lone speck: 1 px, must go
+  const out = removeSmallIslands(m, w, h);
+  assert.equal(out[10 * w + 10], 1, "subject kept");
+  assert.equal(out[31 * w + 31], 1, "second mass kept");
+  assert.equal(out[5 * w + 38], 0, "speck removed");
+});
+
+test("removeSmallIslands is a no-op on a single connected mass", () => {
+  const w = 10, h = 10;
+  const m = new Float32Array(w * h).fill(1);
+  const out = removeSmallIslands(m, w, h);
+  for (let i = 0; i < m.length; i++) assert.equal(out[i], 1);
 });
 
 test("backgroundColor averages only the removed pixels", () => {

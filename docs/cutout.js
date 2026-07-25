@@ -6,9 +6,9 @@
 
 import * as ort from "./vendor/ort.all.min.mjs";
 import {
-  MODEL_SIZE, normalizeImage, guidedFilter,
+  MODEL_SIZE, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
-} from "./cutout-core.js?v=2.1.0";
+} from "./cutout-core.js?v=2.1.1";
 
 const MODEL_URL = "./models/birefnet-lite-384.onnx";
 const MODEL_CACHE = "bouncer-model-3";
@@ -151,8 +151,9 @@ export async function removeBackground(source, { width, height }, onProgress) {
   onProgress?.("refine", 0);
   // BiRefNet's head already ends in a sigmoid, so the raw output is a 0..1
   // probability matte: use it as-is (unlike an unbounded head, min-max
-  // rescaling here would blow out a subject that fills the whole frame).
-  const matteModel = rawMatte;
+  // rescaling here would blow out a subject that fills the whole frame). A
+  // cheap island pass first drops any tiny stray fleck left in the background.
+  const matteModel = removeSmallIslands(rawMatte, MODEL_SIZE, MODEL_SIZE);
 
   // Refine at a capped working size: the matte is stretched over the photo,
   // then the guided filter re-attaches it to the photo's own edges.

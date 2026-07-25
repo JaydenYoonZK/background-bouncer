@@ -126,6 +126,43 @@ export function defringe(m, t) {
   return out;
 }
 
+// Drop tiny isolated islands the model sometimes leaves in the background: a
+// stray fleck of a bright object, a speck of sensor noise. Only components far
+// smaller than the subject are removed (under 0.1% of the frame AND under 2%
+// of the largest mass), so a second person, a held object, or a detached hand
+// is always kept. It runs on the small model matte, so it costs almost nothing.
+export function removeSmallIslands(m, w, h, thresh = 0.5) {
+  const n = w * h;
+  const label = new Int32Array(n).fill(-1);
+  const stack = new Int32Array(n);
+  const sizes = [];
+  for (let s = 0; s < n; s++) {
+    if (m[s] < thresh || label[s] !== -1) continue;
+    const comp = sizes.length;
+    let sp = 0, area = 0;
+    stack[sp++] = s; label[s] = comp;
+    while (sp > 0) {
+      const p = stack[--sp]; area++;
+      const y = (p / w) | 0, x = p - y * w;
+      if (x > 0     && m[p - 1] >= thresh && label[p - 1] === -1) { label[p - 1] = comp; stack[sp++] = p - 1; }
+      if (x < w - 1 && m[p + 1] >= thresh && label[p + 1] === -1) { label[p + 1] = comp; stack[sp++] = p + 1; }
+      if (y > 0     && m[p - w] >= thresh && label[p - w] === -1) { label[p - w] = comp; stack[sp++] = p - w; }
+      if (y < h - 1 && m[p + w] >= thresh && label[p + w] === -1) { label[p + w] = comp; stack[sp++] = p + w; }
+    }
+    sizes.push(area);
+  }
+  if (sizes.length <= 1) return m;
+  let largest = 0;
+  for (const a of sizes) if (a > largest) largest = a;
+  const absMin = 0.001 * n, relMin = 0.02 * largest;
+  const out = m.slice();
+  for (let p = 0; p < n; p++) {
+    const c = label[p];
+    if (c !== -1 && sizes[c] < absMin && sizes[c] < relMin) out[p] = 0;
+  }
+  return out;
+}
+
 // The working size for the refinement pass: big enough that hair detail
 // survives, capped so an 8K photo cannot stall the page.
 export function refineSize(w, h, cap = 2048) {

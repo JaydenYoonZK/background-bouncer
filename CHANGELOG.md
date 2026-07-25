@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.1] - 2026-07-26
+
+### Changed
+
+- Cleaner cutouts. A light pass now removes the tiny stray flecks the model occasionally leaves in the background, so the transparent area comes back clean. Only specks far smaller than the subject are touched; a second person, a held object, or a hand is always kept. Speed is unchanged.
+
 ## [2.1.0] - 2026-07-22
 
 ### Changed
