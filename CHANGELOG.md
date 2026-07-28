@@ -7,13 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Cleaner cutouts. A light pass now removes the tiny stray flecks the model occasionally leaves in the background, so the transparent area comes back clean. Only specks far smaller than the subject are touched; a second person, a held object, or a hand is always kept. Speed is unchanged.
+- The model sometimes left a stray fleck of background floating in the transparent area. Those are dropped now. The pass only touches islands far smaller than the subject, so a hand or a second person survives it.
 
 ## [2.1.0] - 2026-07-22
 
 ### Changed
 
-- Faster cutouts. The model now works on a 384-pixel canvas instead of 512, which nearly halves the time on your device (about 4.5 seconds instead of 8, a 1.85x speedup) with no visible change to the result. The download stays the same.
+- The model works on a 384-pixel canvas instead of 512. That takes about 4.5 seconds where 512 took 8, with no difference I could see in the result. 320 was quicker again but started leaving pieces of the background behind. The model file is the same, so the download has not changed.
 
 ### Fixed
 
@@ -23,24 +23,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- The sample is a sharper, more vivid frame of the boat scene. The stronger separation between the green dress and the boat gives the cleanest cut of the set: both hands kept, no boat rim left behind.
+- Another pass at the sample photo. This frame is sharper and the green reads more clearly against the wood, which is what the cut kept struggling with. Both hands come back complete, no rim of boat attached.
 
 ## [2.0.1] - 2026-07-21
 
 ### Changed
 
-- The sample is a higher-resolution, higher-contrast frame of the same scene, cropped square to fill the card, for an even cleaner cutout.
+- A higher-resolution frame of the same scene for the sample, cropped square to fill the card. The old shot was soft enough that her left hand came back as a ghost.
 
 ## [2.0.0] - 2026-07-21
 
 ### Changed
 
-- New engine. The cutout now runs on BiRefNet, a high-resolution segmentation model that tells subject from background far more precisely than the previous salient-object model. Low-contrast detail a lighter model gives up on, like a pale hand resting on pale wood, now comes out whole instead of as a smudge.
-- The model is re-exported to a 512x512 ONNX and quantized to int8: about 40 MB gzipped, downloaded once and cached for offline use. Input normalization moved to ImageNet statistics.
+- The cutout runs on BiRefNet instead of ISNet. The old model was a salient-object detector: it locked onto the one obvious subject and gave up on anything low-contrast, so a pale hand resting on pale wood came back as a smudge. BiRefNet cuts it whole.
+- The model is re-exported to a 512x512 ONNX and quantized to int8, about 40 MB gzipped, downloaded once and cached for offline use. Input normalization moved to ImageNet statistics.
 
 ### Added
 
-- A new sample photo, framed on the subject, that shows off the sharper cut.
+- A new sample photo, framed tight on the subject.
 
 ## [1.3.1] - 2026-07-20
 
