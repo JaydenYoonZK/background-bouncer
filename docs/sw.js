@@ -4,7 +4,7 @@
    requests pass through untouched. The cache name carries the release version
    and old caches are dropped on activate. */
 
-const VERSION = "?v=2.3.0";
+const VERSION = "?v=2.4.0";
 const CACHE = "background-bouncer-" + VERSION;
 const SHELL = [
   "./",

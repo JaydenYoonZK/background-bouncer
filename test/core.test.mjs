@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, boxBlur, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
-  removeSmallIslands,
+  removeSmallIslands, subjectBounds, blendPatch,
 } from "../docs/cutout-core.js";
 
 /* ---- the reference implementations these must match ---- */
@@ -188,6 +188,36 @@ test("removeSmallIslands is a no-op on a single connected mass", () => {
   const m = new Float32Array(w * h).fill(1);
   const out = removeSmallIslands(m, w, h);
   for (let i = 0; i < m.length; i++) assert.equal(out[i], 1);
+});
+
+test("subjectBounds finds the kept region and reports nothing when empty", () => {
+  const w = 20, h = 20;
+  const m = new Float32Array(w * h);
+  for (let y = 6; y <= 11; y++) for (let x = 4; x <= 9; x++) m[y * w + x] = 1;
+  assert.deepEqual(subjectBounds(m, w, h), { x0: 4, y0: 6, x1: 9, y1: 11 });
+  assert.equal(subjectBounds(new Float32Array(w * h), w, h), null);
+});
+
+test("blendPatch replaces the middle of the region and fades at an inside edge", () => {
+  const bw = 20, bh = 20;
+  const base = new Float32Array(bw * bh).fill(0);
+  const pw = 8, ph = 8;
+  const patch = new Float32Array(pw * ph).fill(1);
+  blendPatch(base, bw, bh, patch, 6, 6, pw, ph, 3);
+  // dead centre of the patch takes the new value outright
+  assert.ok(base[(6 + 4) * bw + (6 + 4)] > 0.95, "centre replaced");
+  // the outermost row of the patch is an inside edge, so it barely counts
+  assert.ok(base[6 * bw + 6] < 0.2, "edge faded");
+  // nothing outside the region moved
+  assert.equal(base[2 * bw + 2], 0);
+});
+
+test("blendPatch keeps a frame-flush edge hard, since there is nothing to blend into", () => {
+  const bw = 10, bh = 10;
+  const base = new Float32Array(bw * bh).fill(0);
+  const patch = new Float32Array(bw * 4).fill(1);
+  blendPatch(base, bw, bh, patch, 0, 0, bw, 4, 2);
+  assert.ok(base[0] > 0.95, "top-left corner is flush with the frame, so it takes the patch fully");
 });
 
 test("backgroundColor averages only the removed pixels", () => {

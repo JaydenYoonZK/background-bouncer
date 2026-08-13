@@ -8,7 +8,8 @@
 import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
-} from "./cutout-core.js?v=2.3.0";
+  subjectBounds, blendPatch,
+} from "./cutout-core.js?v=2.4.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -220,6 +221,59 @@ function encode(canvas, type, quality) {
   });
 }
 
+// One trip through the network: normalize what is on the canvas and read the
+// probability matte back.
+async function runModel(session, ctx, S) {
+  const rgba = ctx.getImageData(0, 0, S, S).data;
+  const x = normalizeImage(rgba, S);
+  const feeds = { [session.inputNames[0]]: new ort.Tensor("float32", x, [1, 3, S, S]) };
+  const out = await session.run(feeds, [session.outputNames[0]]);
+  return out[session.outputNames[0]].data;
+}
+
+function drawRegion(source, sx, sy, sw, sh, dw, dh) {
+  const c = document.createElement("canvas");
+  c.width = dw;
+  c.height = dh;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source, sx, sy, sw, sh, 0, 0, dw, dh);
+  return ctx;
+}
+
+// A subject that fills a third of the photo only gets a third of the model's
+// canvas, and detail it never saw cannot be recovered later. So once the first
+// pass has found where the subject is, the model looks again at just that
+// region, spending the whole canvas on it. Worth it only when the crop is
+// meaningfully tighter than the frame, and only on the GPU, where the second
+// look costs a quarter of a second rather than another four.
+const REFINE_MAX_AREA = 0.55; // skip when the subject already fills the frame
+const REFINE_PAD = 0.06;      // a little context around the subject to judge by
+
+async function refineOnSubject(source, session, S, matteModel, width, height, work) {
+  const b = subjectBounds(matteModel, S, S);
+  if (!b) return false;
+  const boxW = (b.x1 - b.x0 + 1) / S, boxH = (b.y1 - b.y0 + 1) / S;
+  if (boxW * boxH > REFINE_MAX_AREA) return false;
+  // Model space is a squashed square, so a coordinate maps straight across.
+  const x0 = Math.max(0, Math.floor((b.x0 / S - REFINE_PAD) * width));
+  const y0 = Math.max(0, Math.floor((b.y0 / S - REFINE_PAD) * height));
+  const x1 = Math.min(width, Math.ceil(((b.x1 + 1) / S + REFINE_PAD) * width));
+  const y1 = Math.min(height, Math.ceil(((b.y1 + 1) / S + REFINE_PAD) * height));
+  const cw = x1 - x0, ch = y1 - y0;
+  if (cw < 64 || ch < 64) return false;
+
+  const patch = await runModel(session, drawRegion(source, x0, y0, cw, ch, S, S), S);
+  // Place the close-up matte where it was measured from, at working scale.
+  const px = Math.round(x0 * work.w / width), py = Math.round(y0 * work.h / height);
+  const pw = Math.max(1, Math.round(cw * work.w / width));
+  const ph = Math.max(1, Math.round(ch * work.h / height));
+  const scaled = resizePlane(patch, S, S, pw, ph);
+  blendPatch(work.matte, work.w, work.h, scaled, px, py, pw, ph, Math.round(Math.min(pw, ph) * 0.06));
+  return true;
+}
+
 // source: ImageBitmap or canvas/img with natural dimensions attached.
 // Returns { blob, width, height, asPng } where blob is the transparent cutout
 // and asPng() encodes the same pixels as a PNG on demand.
@@ -229,12 +283,7 @@ export async function removeBackground(source, { width, height }, onProgress) {
   const S = active.size;
 
   onProgress?.("model", 0);
-  const { ctx: inCtx } = drawToCanvas(source, S, S);
-  const inputRgba = inCtx.getImageData(0, 0, S, S).data;
-  const x = normalizeImage(inputRgba, S);
-  const feeds = { [session.inputNames[0]]: new ort.Tensor("float32", x, [1, 3, S, S]) };
-  const outputs = await session.run(feeds, [session.outputNames[0]]);
-  const rawMatte = outputs[session.outputNames[0]].data;
+  const rawMatte = await runModel(session, drawToCanvas(source, S, S).ctx, S);
   onProgress?.("model", 1);
 
   onProgress?.("refine", 0);
@@ -248,6 +297,17 @@ export async function removeBackground(source, { width, height }, onProgress) {
   // then the guided filter re-attaches it to the photo's own edges.
   const rs = refineSize(width, height);
   const matteWork = resizePlane(matteModel, S, S, rs.w, rs.h);
+
+  // The close-up second look, where the GPU makes one affordable. It only
+  // sharpens the matte before the guided filter runs, so if anything about it
+  // fails the whole-frame matte is still there and the cutout still happens.
+  if (active.provider === "webgpu") {
+    try {
+      await refineOnSubject(source, session, S, matteModel, width, height,
+        { matte: matteWork, w: rs.w, h: rs.h });
+    } catch { /* the first pass already gave a usable matte */ }
+  }
+
   const { ctx: workCtx } = drawToCanvas(source, rs.w, rs.h);
   const workRgba = workCtx.getImageData(0, 0, rs.w, rs.h).data;
   const guide = luminance(workRgba, rs.w * rs.h);

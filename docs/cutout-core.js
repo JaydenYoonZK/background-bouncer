@@ -168,6 +168,53 @@ export function removeSmallIslands(m, w, h, thresh = 0.5) {
   return out;
 }
 
+// The box the kept subject occupies, in matte pixels, or null if the model
+// kept nothing. Used to decide whether a second, closer look is worth taking.
+export function subjectBounds(m, w, h, thresh = 0.5) {
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    for (let x = 0; x < w; x++) {
+      if (m[row + x] >= thresh) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  return x1 < 0 ? null : { x0, y0, x1, y1 };
+}
+
+// Lay a second, sharper matte over the region it was measured from. Any edge
+// of that region sitting inside the frame fades across `feather` pixels, so
+// the close-up matte and the whole-frame one meet without a visible seam; an
+// edge flush with the frame border has nothing to blend into and stays hard.
+export function blendPatch(base, bw, bh, patch, px, py, pw, ph, feather) {
+  for (let y = 0; y < ph; y++) {
+    const by = py + y;
+    if (by < 0 || by >= bh) continue;
+    for (let x = 0; x < pw; x++) {
+      const bx = px + x;
+      if (bx < 0 || bx >= bw) continue;
+      let k = 1;
+      if (feather > 0) {
+        const d = Math.min(
+          px <= 0 ? feather : x,
+          py <= 0 ? feather : y,
+          px + pw >= bw ? feather : pw - 1 - x,
+          py + ph >= bh ? feather : ph - 1 - y
+        );
+        k = d >= feather ? 1 : d / feather;
+        k = k * k * (3 - 2 * k); // smoothstep, so the handover has no edge
+      }
+      const i = by * bw + bx;
+      base[i] = base[i] * (1 - k) + patch[y * pw + x] * k;
+    }
+  }
+  return base;
+}
+
 // The working size for the refinement pass: big enough that hair detail
 // survives, capped so an 8K photo cannot stall the page.
 export function refineSize(w, h, cap = 2048) {

@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.4.0] - 2026-08-14
+
+### Added
+
+- A second, closer look at the subject, on browsers with a graphics chip. The model reads the whole frame through one square canvas, so a subject that fills a third of the photo only ever gets a third of that resolution, and detail it never saw cannot be recovered afterwards. Once the first pass has found where the subject is, the model now looks again at just that region and spends the whole canvas on it. On a wide test frame that resolved 13% more of the edge as real partial coverage, which is what a hair strand is, while touching under half a percent of the picture: the edges, and nothing else.
+- It only runs when the crop is meaningfully tighter than the frame, so a subject already filling the picture is not made to wait for a pass that would tell it nothing, and only on the graphics path, where a second look costs a quarter of a second rather than another four. If anything about it fails, the whole-frame result is still there and the cutout still happens.
+
 ## [2.3.0] - 2026-08-14
 
 ### Added
