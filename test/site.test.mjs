@@ -49,21 +49,40 @@ test("the page ships no inline event handlers or scripts beyond the theme boot",
   assert.equal(inline.length, 1, "exactly one inline script (the theme boot)");
 });
 
-test("the model and runtime files are in place and under GitHub's limit", () => {
-  for (const f of ["docs/models/birefnet-lite-384.onnx", "docs/vendor/ort.all.min.mjs", "docs/vendor/ort-wasm-simd-threaded.jsep.wasm"]) {
+const MODELS = [
+  "docs/models/birefnet-lite-1024-fp16.onnx.gz",
+  "docs/models/birefnet-lite-384.onnx",
+];
+
+test("both engines' model and runtime files are in place and under GitHub's limit", () => {
+  const runtimes = [
+    "docs/vendor/ort.all.min.mjs",
+    "docs/vendor/ort-wasm-simd-threaded.jsep.wasm",
+    "docs/vendor/ort.webgpu.bundle.min.mjs",
+    "docs/vendor/ort-wasm-simd-threaded.asyncify.wasm",
+  ];
+  for (const f of [...MODELS, ...runtimes]) {
     assert.ok(existsSync(join(root, f)), `${f} exists`);
   }
-  const { statSync } = await_import_stat();
-  function await_import_stat() { return { statSync: (p) => ({ size: readFileSync(p).length }) }; }
-  const size = statSync(join(root, "docs/models/birefnet-lite-384.onnx")).size;
-  assert.ok(size < 100 * 1024 * 1024, "model under 100 MB");
-  assert.ok(size > 10 * 1024 * 1024, "model looks complete");
+  for (const m of MODELS) {
+    const size = readFileSync(join(root, m)).length;
+    // A file over 100 MB cannot be pushed at all, which is why the float16
+    // model ships gzipped.
+    assert.ok(size < 100 * 1024 * 1024, `${m} under 100 MB`);
+    assert.ok(size > 10 * 1024 * 1024, `${m} looks complete`);
+  }
 });
 
-test("MODEL_BYTES matches the actual model file", () => {
-  const declared = +cutout.match(/const MODEL_BYTES = (\d+);/)[1];
-  const actual = readFileSync(join(root, "docs/models/birefnet-lite-384.onnx")).length;
-  assert.equal(declared, actual, "MODEL_BYTES must equal the model's on-disk size for honest progress");
+test("each engine's declared byte count matches its file", () => {
+  const declared = [...cutout.matchAll(/bytes: (\d+)/g)].map((m) => +m[1]).sort((a, b) => a - b);
+  const actual = MODELS.map((m) => readFileSync(join(root, m)).length).sort((a, b) => a - b);
+  assert.deepEqual(declared, actual, "a wrong byte count makes the progress bar lie");
+});
+
+test("the gzipped model really is gzip, so the browser can unpack it", () => {
+  const head = readFileSync(join(root, MODELS[0])).subarray(0, 2);
+  assert.equal(head[0], 0x1f, "gzip magic byte 1");
+  assert.equal(head[1], 0x8b, "gzip magic byte 2");
 });
 
 test("no development scaffolding is left in docs", () => {

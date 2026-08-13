@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0] - 2026-07-28
+
+### Added
+
+- A GPU engine. If your browser can reach your graphics chip, the cutout now runs there at the model's native 1024 pixels instead of 384, and finishes in about a quarter of a second instead of four and a half. The extra resolution is what keeps single hairs and thin edges intact rather than averaging them into the background. That model is float16 and downloads once at about 85 MB; it is stored gzipped because the raw file is past the 100 MB a file can be in a git repository.
+
+### Changed
+
+- Browsers without WebGPU are unaffected: same 40 MB int8 model, same speed, same result as before. If a graphics driver claims WebGPU and then fails, the cutout quietly falls back to the processor instead of breaking.
+
 ## [2.1.1] - 2026-07-26
 
 ### Changed

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  MODEL_SIZE, normalizeImage, boxBlur, guidedFilter,
+  MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, boxBlur, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
   removeSmallIslands,
 } from "../docs/cutout-core.js";
@@ -226,4 +226,5 @@ test("luminance uses the Rec. 601 weights", () => {
 
 test("MODEL_SIZE matches the model's static input", () => {
   assert.equal(MODEL_SIZE, 384);
+  assert.equal(MODEL_SIZE_GPU, 1024);
 });

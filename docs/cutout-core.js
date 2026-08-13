@@ -4,7 +4,12 @@
 // so it runs and tests the same in Node and in the browser. The model I/O
 // lives in cutout.js.
 
+// The canvas each engine reads. The CPU model is squeezed to 384 so a
+// single-threaded browser finishes in a few seconds; a GPU runs the model at
+// the 1024 it was trained on, which is where fine detail like single hairs
+// survives instead of being averaged away.
 export const MODEL_SIZE = 384;
+export const MODEL_SIZE_GPU = 1024;
 
 // BiRefNet reads ImageNet-normalized RGB. Per-channel: (v/255 - mean) / std.
 const IMAGENET_MEAN = [0.485, 0.456, 0.406];
