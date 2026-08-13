@@ -35,14 +35,14 @@
       document.head.appendChild(m);
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=2.2.0">
+  <link rel="stylesheet" href="styles.css?v=2.3.0">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Background Bouncer",
     "applicationCategory": "MultimediaApplication",
-    "softwareVersion": "2.2.0",
+    "softwareVersion": "2.3.0",
     "operatingSystem": "Any (browser-based)",
     "url": "https://jaydenyoonzk.github.io/background-bouncer/",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -232,7 +232,8 @@
         </div>
       </div>
       <div class="toolbar output-actions">
-        <button id="download" class="primary" type="button" disabled aria-label="Download the transparent PNG" data-tip="Save the cutout as a transparent PNG" data-tip-off="Nothing to download yet">Download PNG</button>
+        <button id="download" class="primary" type="button" disabled aria-label="Download the transparent cutout" data-tip="Save the cutout, transparent and small enough to send" data-tip-off="Nothing to download yet">Download</button>
+        <button id="download-png" type="button" hidden aria-label="Download the same cutout as a PNG" data-tip="Same cutout as a PNG: much larger, accepted anywhere">PNG</button>
         <button id="restart" type="button" aria-label="Start over with another photo" data-tip="Clear this photo and pick another">Another photo</button>
         <span class="charcount" id="result-size"></span>
       </div>
@@ -242,7 +243,8 @@
   <h2 class="section-title" id="how"><span aria-hidden="true">🧠</span> How the vanishing works</h2>
   <p>A photo does not say which pixels are the subject, so the tool asks a neural network. BiRefNet, the high-resolution segmentation model from Zheng Peng and colleagues' <a href="https://github.com/ZhengPeng7/BiRefNet" target="_blank" rel="noopener">Bilateral Reference</a> research, studies the whole picture and paints a probability map: this pixel is the dog, this pixel is the floor. It is unusually good at the hard cases, a pale hand against pale wood or a single strand against a bright sky, where a lighter model gives up and leaves a smudge.</p>
   <p>The map is sharp, but the model reads your photo on a square working canvas, so its edges are only as fine as that canvas allows. A second pass fixes this: a guided filter reads the actual edges of your photo at full detail and re-attaches the mask to them, which is how single hairs and whiskers make it into the cutout. A final curve snaps the sure areas fully solid or fully clear, leaving softness only where the photo itself is soft.</p>
-  <p>Everything runs on ONNX Runtime compiled to WebAssembly, in a worker, so the page stays responsive while the network thinks. A photo takes several seconds on a modern laptop, a little longer on a phone: the model is studying every pixel on your own processor, not a server farm.</p>
+  <p>Everything runs on ONNX Runtime, inside your browser. If the browser can reach your graphics chip, the model runs there at full resolution and a photo takes about a quarter of a second. If it cannot, the same work happens on the processor in a worker, which keeps the page responsive and takes a few seconds. Either way your photo is being studied on your own machine, not on a server farm.</p>
+  <p>What comes back is a WebP that keeps its transparency exactly and throws away only a trace of colour the eye cannot locate: on the sample photo the average pixel differs from the PNG by one and a half parts in 255, and the file is about a tenth of the size. That is the difference between a cutout you can send in a message and one you cannot. If something you use insists on a PNG, the same pixels are one click away.</p>
 
   <h2 class="section-title" id="private"><span aria-hidden="true">🔒</span> Private by construction</h2>
   <p>Background removal sites usually mean uploading your photo to someone's server. This one cannot upload anything: the page's Content Security Policy sets <code>connect-src 'self'</code>, so the browser itself refuses any request except fetching the page's own files. Family photos, ID pictures, unreleased product shots: they all stay in your RAM and nowhere else.</p>
@@ -303,6 +305,6 @@
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
 </button>
 
-<script type="module" src="app.js?v=2.2.0"></script>
+<script type="module" src="app.js?v=2.3.0"></script>
 </body>
 </html>

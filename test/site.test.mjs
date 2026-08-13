@@ -79,6 +79,14 @@ test("each engine's declared byte count matches its file", () => {
   assert.deepEqual(declared, actual, "a wrong byte count makes the progress bar lie");
 });
 
+test("the cutout is saved as WebP, with a PNG available on demand", () => {
+  assert.match(cutout, /encode\(outCanvas, "image\/webp", WEBP_QUALITY\)/, "the download is WebP");
+  assert.match(cutout, /asPng/, "the same pixels can still be had as a PNG");
+  const q = +cutout.match(/const WEBP_QUALITY = ([\d.]+);/)[1];
+  // Low enough to shrink the file, high enough that the loss stays invisible.
+  assert.ok(q >= 0.85 && q <= 0.95, `WEBP_QUALITY ${q} should sit between 0.85 and 0.95`);
+});
+
 test("the gzipped model really is gzip, so the browser can unpack it", () => {
   const head = readFileSync(join(root, MODELS[0])).subarray(0, 2);
   assert.equal(head[0], 0x1f, "gzip magic byte 1");

@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, loadSession } from "./cutout.js?v=2.2.0";
+import { removeBackground, loadSession } from "./cutout.js?v=2.3.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -10,6 +10,7 @@ const imgBefore = $("img-before");
 const imgAfter = $("img-after");
 const divider = $("compare-divider");
 const downloadBtn = $("download");
+const pngBtn = $("download-png");
 const restartBtn = $("restart");
 const resultSize = $("result-size");
 const uploadBtn = $("upload");
@@ -153,10 +154,12 @@ async function processFile(file) {
   sampleBtn.disabled = true;
   alerts.innerHTML = "";
   try {
-    const { blob } = await removeBackground(img, { width: img.naturalWidth, height: img.naturalHeight }, showProgress);
+    const result = await removeBackground(img, { width: img.naturalWidth, height: img.naturalHeight }, showProgress);
+    const blob = result.blob;
     resultBlob = blob;
     const base = (file.name || "").replace(/\.[^./\\]+$/, "");
-    resultName = base ? base + "-cutout.png" : "cutout.png";
+    const ext = blob.type === "image/webp" ? "webp" : "png";
+    resultName = (base || "cutout") + (base ? "-cutout." : ".") + ext;
     if (beforeUrl) URL.revokeObjectURL(beforeUrl);
     if (afterUrl) URL.revokeObjectURL(afterUrl);
     beforeUrl = url;
@@ -166,7 +169,9 @@ async function processFile(file) {
     results.hidden = false;
     resultBody.hidden = false;
     downloadBtn.disabled = false;
+    downloadBtn.textContent = "Download " + (ext === "webp" ? "WebP" : "PNG");
     resultSize.textContent = formatBytes(blob.size);
+    offerPng(result, base);
     setWipe(55);
     resultBody.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     // Let the filled bar rest at 100% for a beat before it clears.
@@ -208,6 +213,9 @@ restartBtn.addEventListener("click", () => {
   results.hidden = true;
   alerts.innerHTML = "";
   downloadBtn.disabled = true;
+  downloadBtn.textContent = "Download";
+  pngBtn.hidden = true;
+  if (pngUrl) { URL.revokeObjectURL(pngUrl); pngUrl = null; }
   // Keep focus on the logical next action rather than dropping it to <body>.
   uploadBtn.focus({ preventScroll: true });
   toolCard.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
@@ -215,10 +223,48 @@ restartBtn.addEventListener("click", () => {
 
 downloadBtn.addEventListener("click", () => {
   if (!resultBlob) return;
+  save(afterUrl, resultName);
+});
+
+function save(href, name) {
   const a = document.createElement("a");
-  a.href = afterUrl;
-  a.download = resultName;
+  a.href = href;
+  a.download = name;
   a.click();
+}
+
+// The small file is ready the moment the cutout is. The PNG of the same
+// pixels is encoded quietly afterwards, so anyone who needs one can still
+// take it, and so the two sizes can be compared honestly rather than claimed.
+let pngUrl = null;
+let pngName = "cutout.png";
+async function offerPng(result, base) {
+  if (pngUrl) { URL.revokeObjectURL(pngUrl); pngUrl = null; }
+  // A browser with no WebP encoder already handed back a PNG; nothing to add.
+  if (result.blob.type !== "image/webp") { pngBtn.hidden = true; return; }
+  pngBtn.hidden = false;
+  pngBtn.disabled = true;
+  pngBtn.textContent = "PNG…";
+  try {
+    const png = await result.asPng();
+    // A newer photo may have finished while this encode was running.
+    if (resultBlob !== result.blob) return;
+    pngUrl = URL.createObjectURL(png);
+    pngName = (base || "cutout") + (base ? "-cutout.png" : ".png");
+    pngBtn.disabled = false;
+    pngBtn.textContent = "PNG · " + formatBytes(png.size);
+    const times = png.size / result.blob.size;
+    if (times >= 1.5) {
+      resultSize.textContent = formatBytes(result.blob.size)
+        + " · " + (times < 10 ? times.toFixed(1) : Math.round(times)) + "× smaller than PNG";
+    }
+  } catch {
+    pngBtn.hidden = true;
+  }
+}
+
+pngBtn.addEventListener("click", () => {
+  if (pngUrl) save(pngUrl, pngName);
 });
 
 // Drop a photo anywhere on the page: the tool card lights up as the drop zone

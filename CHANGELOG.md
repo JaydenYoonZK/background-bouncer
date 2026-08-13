@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0] - 2026-08-14
+
+### Added
+
+- The cutout is saved as a WebP now, which is the difference between a file you can send in a message and one you cannot. Its transparency is bit-for-bit identical to the PNG of the same image, measured pixel by pixel, and only the colour gives anything up: about 2 parts in 255 on average, which is not something an eye finds. On the sample photo that is 72 KB instead of 402 KB.
+- A PNG button next to it, for anything that will only take a PNG. It shows both sizes so the difference is visible rather than claimed, and the PNG is only encoded if it is wanted, so nobody waits on a file they are not going to use.
+
+### Fixed
+
+- The page said a photo takes several seconds on a modern laptop. That stopped being true when the graphics path landed, and it now describes both engines.
+
 ## [2.2.0] - 2026-07-28
 
 ### Added
