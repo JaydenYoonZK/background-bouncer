@@ -191,10 +191,11 @@ export function crc32(bytes) {
   return (c ^ 0xffffffff) >>> 0;
 }
 
-// Filter rows yStart..yEnd (exclusive) of straight RGBA into `out`, picking
-// per row whichever of the five PNG predictors leaves the least to compress.
-export function pngFilterInto(rgba, w, h, yStart, yEnd, out) {
-  const stride = w * 4;
+// Filter rows yStart..yEnd (exclusive) into `out`, picking per row whichever
+// of the five PNG predictors leaves the least to compress. bpp is bytes per
+// pixel: 4 for straight RGBA, 1 for palette indices.
+export function pngFilterInto(rgba, w, h, yStart, yEnd, out, bpp = 4) {
+  const stride = w * bpp;
   const rowBuf = [
     new Uint8Array(stride), new Uint8Array(stride), new Uint8Array(stride),
     new Uint8Array(stride), new Uint8Array(stride),
@@ -208,9 +209,9 @@ export function pngFilterInto(rgba, w, h, yStart, yEnd, out) {
     const sums = [0, 0, 0, 0, 0];
     for (let i = 0; i < stride; i++) {
       const v = rgba[row + i];
-      const left = i >= 4 ? rgba[row + i - 4] : 0;
+      const left = i >= bpp ? rgba[row + i - bpp] : 0;
       const up = y > 0 ? rgba[prev + i] : 0;
-      const ul = y > 0 && i >= 4 ? rgba[prev + i - 4] : 0;
+      const ul = y > 0 && i >= bpp ? rgba[prev + i - bpp] : 0;
       const c0 = v;
       const c1 = (v - left) & 255;
       const c2 = (v - up) & 255;
@@ -257,14 +258,18 @@ export function pngColorChunks(png) {
   return out;
 }
 
-// A complete 8-bit RGBA PNG. yieldEvery > 0 hands the main thread back every
-// that many rows, so a 16-megapixel encode cannot freeze an animation.
-export async function encodePng(rgba, w, h, { colorChunks = [], yieldEvery = 0 } = {}) {
-  const stride = w * 4;
+// A complete 8-bit PNG. Straight RGBA by default; pass indexed: {palette}
+// (flat RGBA entries) with `data` holding one palette index per pixel for a
+// palette PNG, which is what a photo quantized to 256 colours saves as.
+// yieldEvery > 0 hands the main thread back every that many rows, so a
+// 16-megapixel encode cannot freeze an animation.
+export async function encodePng(data, w, h, { colorChunks = [], yieldEvery = 0, indexed = null } = {}) {
+  const bpp = indexed ? 1 : 4;
+  const stride = w * bpp;
   const filtered = new Uint8Array(h * (stride + 1));
   const step = yieldEvery > 0 ? yieldEvery : h;
   for (let y0 = 0; y0 < h; y0 += step) {
-    pngFilterInto(rgba, w, h, y0, Math.min(h, y0 + step), filtered);
+    pngFilterInto(data, w, h, y0, Math.min(h, y0 + step), filtered, bpp);
     if (yieldEvery > 0 && y0 + step < h) await new Promise((r) => setTimeout(r, 0));
   }
   const idat = new Uint8Array(await new Response(
@@ -274,21 +279,123 @@ export async function encodePng(rgba, w, h, { colorChunks = [], yieldEvery = 0 }
   const dv = new DataView(ihdr.buffer);
   dv.setUint32(0, w);
   dv.setUint32(4, h);
-  ihdr[8] = 8;  // bit depth
-  ihdr[9] = 6;  // RGBA
+  ihdr[8] = 8;                  // bit depth
+  ihdr[9] = indexed ? 3 : 6;    // palette or RGBA
   const parts = [
     new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
     pngChunk("IHDR", ihdr),
     ...colorChunks,
-    pngChunk("IDAT", idat),
-    pngChunk("IEND", new Uint8Array(0)),
   ];
+  if (indexed) {
+    const count = indexed.palette.length / 4;
+    const plte = new Uint8Array(count * 3);
+    const trns = new Uint8Array(count);
+    for (let i = 0; i < count; i++) {
+      plte[i * 3] = indexed.palette[i * 4];
+      plte[i * 3 + 1] = indexed.palette[i * 4 + 1];
+      plte[i * 3 + 2] = indexed.palette[i * 4 + 2];
+      trns[i] = indexed.palette[i * 4 + 3];
+    }
+    parts.push(pngChunk("PLTE", plte), pngChunk("tRNS", trns));
+  }
+  parts.push(pngChunk("IDAT", idat), pngChunk("IEND", new Uint8Array(0)));
   let len = 0;
   for (const p of parts) len += p.length;
   const out = new Uint8Array(len);
   let o = 0;
   for (const p of parts) { out.set(p, o); o += p.length; }
   return out;
+}
+
+// ---- palette quantization ----
+// What TinyPNG does: pick up to 256 colours that describe this particular
+// photo, then describe every pixel by its nearest pick, hiding the rounding
+// in dithering noise. Median cut over RGBA boxes; the sampleStep keeps the
+// box statistics affordable on a phone.
+
+export function buildPalette(rgba, n, max = 256, sampleStep = 1) {
+  const samples = [];
+  for (let i = 0; i < n; i += sampleStep) {
+    samples.push([rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2], rgba[i * 4 + 3]]);
+  }
+  let boxes = [samples];
+  while (boxes.length < max) {
+    // split the box with the widest channel spread
+    let bi = -1, bc = 0, bw = -1;
+    for (let b = 0; b < boxes.length; b++) {
+      if (boxes[b].length < 2) continue;
+      for (let c = 0; c < 4; c++) {
+        let lo = 255, hi = 0;
+        for (const p of boxes[b]) { if (p[c] < lo) lo = p[c]; if (p[c] > hi) hi = p[c]; }
+        if (hi - lo > bw) { bw = hi - lo; bi = b; bc = c; }
+      }
+    }
+    if (bi < 0 || bw <= 0) break;
+    const box = boxes[bi];
+    box.sort((p, q) => p[bc] - q[bc]);
+    const mid = box.length >> 1;
+    boxes.splice(bi, 1, box.slice(0, mid), box.slice(mid));
+  }
+  const palette = new Uint8Array(boxes.length * 4);
+  for (let b = 0; b < boxes.length; b++) {
+    let r = 0, g = 0, bl = 0, a = 0;
+    for (const p of boxes[b]) { r += p[0]; g += p[1]; bl += p[2]; a += p[3]; }
+    const m = boxes[b].length || 1;
+    palette[b * 4] = Math.round(r / m);
+    palette[b * 4 + 1] = Math.round(g / m);
+    palette[b * 4 + 2] = Math.round(bl / m);
+    palette[b * 4 + 3] = Math.round(a / m);
+  }
+  return palette;
+}
+
+// One dither pass over rows yStart..yEnd, Floyd-Steinberg, chunkable: the
+// state carries the diffused error between calls so a phone can yield
+// between slices. Nearest-palette lookups go through a coarse cache; the
+// dithering supplies the precision the cache gives up.
+export function makeDitherState(w, palette, strength = 1) {
+  return {
+    cur: new Float32Array((w + 2) * 4),
+    next: new Float32Array((w + 2) * 4),
+    cache: new Int16Array(65536).fill(-1),
+    palette,
+    k: strength,
+  };
+}
+
+export function ditherRows(rgba, w, yStart, yEnd, indices, st) {
+  const pal = st.palette;
+  const count = pal.length / 4;
+  for (let y = yStart; y < yEnd; y++) {
+    st.next.fill(0);
+    const row = y * w;
+    for (let x = 0; x < w; x++) {
+      const e = (x + 1) * 4;
+      const r = Math.max(0, Math.min(255, rgba[(row + x) * 4] + st.cur[e]));
+      const g = Math.max(0, Math.min(255, rgba[(row + x) * 4 + 1] + st.cur[e + 1]));
+      const b = Math.max(0, Math.min(255, rgba[(row + x) * 4 + 2] + st.cur[e + 2]));
+      const a = Math.max(0, Math.min(255, rgba[(row + x) * 4 + 3] + st.cur[e + 3]));
+      const key = ((r & 0xf0) << 8) | ((g & 0xf0) << 4) | (b & 0xf0) | (a >> 4);
+      let best = st.cache[key];
+      if (best < 0) {
+        let bd = Infinity;
+        for (let p = 0; p < count; p++) {
+          const dr = r - pal[p * 4], dg = g - pal[p * 4 + 1], db = b - pal[p * 4 + 2], da = a - pal[p * 4 + 3];
+          const d = dr * dr + dg * dg + db * db + 2 * da * da;
+          if (d < bd) { bd = d; best = p; }
+        }
+        st.cache[key] = best;
+      }
+      indices[row + x] = best;
+      const er = (r - pal[best * 4]) * st.k, eg = (g - pal[best * 4 + 1]) * st.k, eb = (b - pal[best * 4 + 2]) * st.k, ea = (a - pal[best * 4 + 3]) * st.k;
+      // Floyd-Steinberg weights: 7/16 right, 3/16 below-left, 5/16 below, 1/16 below-right
+      st.cur[e + 4] += er * 0.4375; st.cur[e + 5] += eg * 0.4375; st.cur[e + 6] += eb * 0.4375; st.cur[e + 7] += ea * 0.4375;
+      st.next[e - 4] += er * 0.1875; st.next[e - 3] += eg * 0.1875; st.next[e - 2] += eb * 0.1875; st.next[e - 1] += ea * 0.1875;
+      st.next[e] += er * 0.3125; st.next[e + 1] += eg * 0.3125; st.next[e + 2] += eb * 0.3125; st.next[e + 3] += ea * 0.3125;
+      st.next[e + 4] += er * 0.0625; st.next[e + 5] += eg * 0.0625; st.next[e + 6] += eb * 0.0625; st.next[e + 7] += ea * 0.0625;
+    }
+    const t = st.cur; st.cur = st.next; st.next = t;
+  }
 }
 
 // How much of the frame the matte actually keeps. The engine reads this to

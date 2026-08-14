@@ -9,8 +9,8 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
-  subjectPresence, encodePng, pngColorChunks,
-} from "./cutout-core.js?v=2.16.0";
+  subjectPresence, encodePng, pngColorChunks, buildPalette, makeDitherState, ditherRows,
+} from "./cutout-core.js?v=2.17.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -482,47 +482,88 @@ export async function removeBackground(source, { width, height }, onProgress) {
   // new background and a 16-megapixel photo is walked once, not twice.
   finishOutput(outImage.data, matteFull, n, backgroundColor(outImage.data, matteFull, n), bgMap);
   outCtx.putImageData(outImage, 0, 0);
-  // WebP is the file the visitor actually gets. It stores the alpha channel
-  // exactly, so the cutout itself is untouched, and spends a little colour
-  // precision the eye cannot find: measured against the PNG of the same
-  // cutout, the average pixel differs by 1.5 parts in 255 and the file is a
-  // tenth of the size. It also encodes faster than PNG on a large photo.
-  // A browser too old to encode it hands back a PNG, which is still correct.
-  const blob = await encode(outCanvas, "image/webp", WEBP_QUALITY);
-  // The PNG is not made unless it is asked for, so nobody waits on an encode
-  // they will not use. When it is asked for, the file is assembled here with
-  // per-row adaptive filtering, which measures 12 to 17% smaller than the
-  // canvas encoder's output for the same lossless pixels. The browser still
-  // writes the colour profile: a 1x1 canvas encode is harvested for its
-  // colour chunks so the custom file carries exactly the profile the canvas
-  // would have declared. Anything failing falls back to the canvas encoder.
+  // The canvas stores hidden pixels premultiplied to black; the straight
+  // copy keeps their old colours, which are invisible bytes that cost every
+  // encoder real file size. Clear them once, for all the encoders below,
+  // in chunks so a 16-megapixel clear cannot hold an animation frame.
+  {
+    const data = outImage.data;
+    const CLEAR_STEP = 1 << 20;
+    for (let start = 0; start < n; start += CLEAR_STEP) {
+      const end = Math.min(n, start + CLEAR_STEP);
+      for (let i = start; i < end; i++) {
+        if (data[i * 4 + 3] === 0) { data[i * 4] = 0; data[i * 4 + 1] = 0; data[i * 4 + 2] = 0; }
+      }
+      if (end < n) await new Promise((r) => setTimeout(r, 0));
+    }
+  }
+  // The colour chunks the browser would write for this canvas, harvested
+  // from a one-pixel encode, so every custom-assembled file carries exactly
+  // the profile the canvas would have declared.
+  const harvestColorChunks = async () => {
+    const probe = document.createElement("canvas");
+    probe.width = probe.height = 1;
+    let probeCtx;
+    try { probeCtx = probe.getContext("2d", { colorSpace: space }); } catch { /* older browser */ }
+    if (!probeCtx) probeCtx = probe.getContext("2d");
+    probeCtx.drawImage(outCanvas, 0, 0, 1, 1);
+    const tiny = await encode(probe, "image/png");
+    return pngColorChunks(new Uint8Array(await tiny.arrayBuffer()));
+  };
+  // WebP is the file the visitor gets where the browser can make one: exact
+  // alpha, a little colour precision the eye cannot find, a tenth the size
+  // of the lossless PNG. Where it cannot, Safari above all, the compressed
+  // file is a palette PNG instead: up to 256 colours chosen for this photo,
+  // the rounding hidden in dithering noise, which is the same trade the
+  // well-known PNG shrinking services make. Transparency survives both.
+  let blob = await encode(outCanvas, "image/webp", WEBP_QUALITY);
+  let compressed = blob.type === "image/webp" ? "webp" : null;
+  // Test switch: behave exactly like a browser with no WebP encoder, so the
+  // palette path can be exercised on one that has it.
+  let png8Test = false;
+  try { png8Test = !!localStorage.getItem("bouncer-png8"); } catch { /* storage may be blocked */ }
+  if (png8Test && compressed) {
+    blob = await encode(outCanvas, "image/png");
+    compressed = null;
+  }
+  if (!compressed) {
+    try {
+      const data = outImage.data;
+      const palette = buildPalette(data, n, 256, Math.max(1, Math.floor(n / 200000)));
+      const indices = new Uint8Array(n);
+      const DITHER_STRENGTH = 0.7;
+      const st = makeDitherState(outW, palette, DITHER_STRENGTH);
+      const DITHER_ROWS = 64;
+      for (let y0 = 0; y0 < outH; y0 += DITHER_ROWS) {
+        ditherRows(data, outW, y0, Math.min(outH, y0 + DITHER_ROWS), indices, st);
+        if (y0 + DITHER_ROWS < outH) await new Promise((r) => setTimeout(r, 0));
+      }
+      const bytes = await encodePng(indices, outW, outH, {
+        colorChunks: await harvestColorChunks(),
+        yieldEvery: 256,
+        indexed: { palette },
+      });
+      const quantized = new Blob([bytes], { type: "image/png" });
+      // Only worth shipping if it genuinely is the compressed file.
+      if (quantized.size < blob.size * 0.8) {
+        blob = quantized;
+        compressed = "png8";
+      }
+    } catch { /* the lossless PNG stays the download */ }
+  }
+  // The lossless PNG is not made unless it is asked for, so nobody waits on
+  // an encode they will not use. When it is asked for, the file is assembled
+  // here with per-row adaptive filtering, which measures 12 to 17% smaller
+  // than the canvas encoder's output for the same lossless pixels. Anything
+  // failing falls back to the canvas encoder.
   let pngPixels = outImage;
   let pending = null;
   const asPng = () => (pending ||= (async () => {
     try {
-      const data = pngPixels.data;
-      // The canvas stores hidden pixels premultiplied to black; straight
-      // RGBA keeps their old colours, which are invisible bytes that cost
-      // real file size. Match the canvas: black under zero alpha. Chunked,
-      // like the filtering below, so a 16-megapixel clear cannot hold the
-      // main thread through an animation frame.
-      const CLEAR_STEP = 1 << 20;
-      for (let start = 0; start < n; start += CLEAR_STEP) {
-        const end = Math.min(n, start + CLEAR_STEP);
-        for (let i = start; i < end; i++) {
-          if (data[i * 4 + 3] === 0) { data[i * 4] = 0; data[i * 4 + 1] = 0; data[i * 4 + 2] = 0; }
-        }
-        if (end < n) await new Promise((r) => setTimeout(r, 0));
-      }
-      const probe = document.createElement("canvas");
-      probe.width = probe.height = 1;
-      let probeCtx;
-      try { probeCtx = probe.getContext("2d", { colorSpace: space }); } catch { /* older browser */ }
-      if (!probeCtx) probeCtx = probe.getContext("2d");
-      probeCtx.drawImage(outCanvas, 0, 0, 1, 1);
-      const tiny = await encode(probe, "image/png");
-      const colorChunks = pngColorChunks(new Uint8Array(await tiny.arrayBuffer()));
-      const bytes = await encodePng(data, outW, outH, { colorChunks, yieldEvery: 64 });
+      const bytes = await encodePng(pngPixels.data, outW, outH, {
+        colorChunks: await harvestColorChunks(),
+        yieldEvery: 64,
+      });
       return new Blob([bytes], { type: "image/png" });
     } catch {
       return encode(outCanvas, "image/png");
@@ -531,5 +572,5 @@ export async function removeBackground(source, { width, height }, onProgress) {
     }
   })());
   onProgress?.("encode", 1);
-  return { blob, width: outW, height: outH, asPng };
+  return { blob, width: outW, height: outH, asPng, compressed };
 }

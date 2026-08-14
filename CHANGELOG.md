@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.17.0] - 2026-08-15
+
+### Fixed
+
+- iPhones finally get a compressed download. Safari cannot make WebP files at all, so on an iPhone the tool's compressed path simply did not exist and the only file on offer was the lossless PNG: a 1.5 MB photo came back as 4.7 MB, which reads as the opposite of compression. On a browser without a WebP encoder the compressed download is now a palette PNG: up to 256 colours chosen for that particular photo by median cut, the rounding hidden in Floyd-Steinberg dithering, which is the same trade the well-known PNG shrinking services make. Transparency survives in the palette itself. Measured on the very photo that raised the complaint, 4032 by 2268 from an iPhone: 1.8 MB where the lossless file is 3.9, with faces, glasses, and the jacket's shading indistinguishable at full size. The palette file only ships when it is genuinely smaller, the whole encode yields to the page as it works, and the lossless PNG stays one tap away next to it.
+
 ## [2.16.0] - 2026-08-14
 
 ### Changed

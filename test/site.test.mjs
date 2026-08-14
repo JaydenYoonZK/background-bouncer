@@ -146,6 +146,15 @@ test("saved files carry the JaydenART Background Bouncer name", () => {
   assert.ok(!app.includes('"-cutout'), "the old -cutout suffix is gone");
 });
 
+test("browsers without a WebP encoder get a compressed palette PNG", () => {
+  assert.match(cutout, /buildPalette\(/, "the palette is chosen for the photo");
+  assert.match(cutout, /ditherRows\(/, "the rounding hides in dithering");
+  assert.match(cutout, /quantized\.size < blob\.size \* 0\.8/, "shipped only when genuinely smaller");
+  const core = read("docs/cutout-core.js");
+  assert.match(core, /pngChunk\("PLTE"/, "the palette chunk is written");
+  assert.match(core, /pngChunk\("tRNS"/, "palette transparency survives");
+});
+
 test("the PNG is assembled with adaptive filtering, canvas as fallback", () => {
   assert.match(cutout, /encodePng\(/, "the custom encoder runs");
   assert.match(cutout, /pngColorChunks\(/, "the browser's colour profile is harvested");

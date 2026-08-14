@@ -6,6 +6,7 @@ import {
   removeSmallIslands, subjectBounds, blendPatch, finishOutput, colorRescue, dropOrphanSoft,
   resizePlaneF, localBackgroundMap, subjectPresence,
   crc32, pngChunk, pngColorChunks, pngFilterInto, encodePng,
+  buildPalette, makeDitherState, ditherRows,
 } from "../docs/cutout-core.js";
 import zlib from "node:zlib";
 
@@ -385,6 +386,101 @@ test("encodePng roundtrips pixels exactly through a real inflate", async () => {
     }
   }
   assert.deepEqual([...out], [...rgba], "decoded pixels match the input exactly");
+});
+
+test("buildPalette finds the colours a picture is actually made of", () => {
+  // four flat quadrants: the palette must contain all four, near-exactly
+  const w = 32, h = 32, n = w * h;
+  const rgba = new Uint8ClampedArray(n * 4);
+  const colors = [[220, 40, 40, 255], [40, 200, 60, 255], [50, 60, 230, 255], [0, 0, 0, 0]];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const c = colors[(y < 16 ? 0 : 2) + (x < 16 ? 0 : 1)];
+    const i = (y * w + x) * 4;
+    rgba[i] = c[0]; rgba[i + 1] = c[1]; rgba[i + 2] = c[2]; rgba[i + 3] = c[3];
+  }
+  const pal = buildPalette(rgba, n, 8);
+  assert.ok(pal.length / 4 <= 8);
+  for (const c of colors) {
+    let best = Infinity;
+    for (let p = 0; p < pal.length / 4; p++) {
+      const d = Math.abs(pal[p * 4] - c[0]) + Math.abs(pal[p * 4 + 1] - c[1]) + Math.abs(pal[p * 4 + 2] - c[2]) + Math.abs(pal[p * 4 + 3] - c[3]);
+      if (d < best) best = d;
+    }
+    assert.ok(best <= 8, `palette reaches ${c}, off by ${best}`);
+  }
+});
+
+test("ditherRows stays honest: valid indices, small mean error, flat stays flat", () => {
+  const w = 40, h = 24, n = w * h;
+  const rgba = new Uint8ClampedArray(n * 4);
+  let s = 11;
+  for (let i = 0; i < rgba.length; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; rgba[i] = s & 255; }
+  const pal = buildPalette(rgba, n, 64);
+  const idx = new Uint8Array(n);
+  const st = makeDitherState(w, pal);
+  ditherRows(rgba, w, 0, h, idx, st);
+  let err = 0;
+  for (let i = 0; i < n; i++) {
+    assert.ok(idx[i] < pal.length / 4, "index in range");
+    err += Math.abs(pal[idx[i] * 4] - rgba[i * 4]) + Math.abs(pal[idx[i] * 4 + 1] - rgba[i * 4 + 1]) + Math.abs(pal[idx[i] * 4 + 2] - rgba[i * 4 + 2]);
+  }
+  assert.ok(err / n < 220, "per-pixel colour error stays bounded on noise, got " + (err / n).toFixed(1));
+  // a flat image quantizes to one index everywhere, no dither noise invented
+  const flat = new Uint8ClampedArray(n * 4);
+  for (let i = 0; i < n; i++) { flat[i * 4] = 90; flat[i * 4 + 1] = 120; flat[i * 4 + 2] = 30; flat[i * 4 + 3] = 255; }
+  const palF = buildPalette(flat, n, 16);
+  const idxF = new Uint8Array(n);
+  ditherRows(flat, w, 0, h, idxF, makeDitherState(w, palF));
+  assert.ok(new Set(idxF).size === 1, "flat colour uses one palette entry");
+});
+
+test("indexed encodePng roundtrips indices and palette exactly", async () => {
+  const w = 21, h = 13, n = w * h;
+  const rgba = new Uint8ClampedArray(n * 4);
+  let s = 3;
+  for (let i = 0; i < rgba.length; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; rgba[i] = s & 255; }
+  const pal = buildPalette(rgba, n, 32);
+  const idx = new Uint8Array(n);
+  ditherRows(rgba, w, 0, h, idx, makeDitherState(w, pal));
+  const png = await encodePng(idx, w, h, { indexed: { palette: pal } });
+  const dv = new DataView(png.buffer, png.byteOffset);
+  assert.equal(png[8 + 8 + 9], 3, "colour type is palette");
+  // walk chunks: PLTE and tRNS must sit before IDAT and match the palette
+  let p = 8, plte = null, trns = null, idat = null;
+  while (p + 12 <= png.length) {
+    const len = dv.getUint32(p);
+    const type = String.fromCharCode(png[p + 4], png[p + 5], png[p + 6], png[p + 7]);
+    if (type === "PLTE") plte = png.slice(p + 8, p + 8 + len);
+    if (type === "tRNS") trns = png.slice(p + 8, p + 8 + len);
+    if (type === "IDAT") { assert.ok(plte && trns, "PLTE and tRNS precede IDAT"); idat = png.slice(p + 8, p + 8 + len); }
+    p += 12 + len;
+  }
+  const count = pal.length / 4;
+  assert.equal(plte.length, count * 3);
+  assert.equal(trns.length, count);
+  for (let i = 0; i < count; i++) {
+    assert.equal(plte[i * 3], pal[i * 4]);
+    assert.equal(trns[i], pal[i * 4 + 3]);
+  }
+  // inflate and unfilter at one byte per pixel: indices come back exactly
+  const raw = zlib.inflateSync(idat);
+  const out = new Uint8Array(n);
+  const paeth = (a, b, c) => {
+    const q = a + b - c, pa = Math.abs(q - a), pb = Math.abs(q - b), pc = Math.abs(q - c);
+    return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+  };
+  for (let y = 0; y < h; y++) {
+    const f = raw[y * (w + 1)];
+    for (let i = 0; i < w; i++) {
+      const v = raw[y * (w + 1) + 1 + i];
+      const left = i >= 1 ? out[y * w + i - 1] : 0;
+      const up = y > 0 ? out[(y - 1) * w + i] : 0;
+      const ul = y > 0 && i >= 1 ? out[(y - 1) * w + i - 1] : 0;
+      const add = f === 0 ? 0 : f === 1 ? left : f === 2 ? up : f === 3 ? (left + up) >> 1 : paeth(left, up, ul);
+      out[y * w + i] = (v + add) & 255;
+    }
+  }
+  assert.deepEqual([...out], [...idx], "decoded indices match exactly");
 });
 
 test("subjectPresence reads how much of the frame the matte keeps", () => {

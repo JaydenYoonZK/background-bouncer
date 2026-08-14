@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.16.0";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.17.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -293,10 +293,18 @@ async function processFile(file) {
     compareStage.classList.add("done");
     downloadBtn.disabled = false;
     downloadBtn.textContent = "Download " + (ext === "webp" ? "WebP" : "PNG");
-    // The note explains the WebP-and-PNG pair; a browser whose canvas cannot
-    // encode WebP only ever has the PNG, and the note would describe a file
-    // that does not exist.
-    dlNote.hidden = ext !== "webp";
+    // The note names the pair the visitor actually has. With no WebP encoder
+    // the compressed file is a palette PNG, and the wording follows; with no
+    // compressed file at all the note stays out of the way.
+    if (result.compressed === "png8") {
+      dlNote.textContent = "The first file is a PNG compressed to 256 colours chosen for this photo, the same trade the well-known PNG shrinkers make. The lossless PNG next to it keeps every colour and is far larger.";
+      dlNote.hidden = false;
+    } else if (result.compressed === "webp") {
+      dlNote.textContent = "The WebP is the compressed file, usually a fraction of the photo you gave. The PNG is lossless for anything that insists on one, and a lossless photo is usually far larger than the compressed one.";
+      dlNote.hidden = false;
+    } else {
+      dlNote.hidden = true;
+    }
     resultSize.textContent = formatBytes(blob.size);
     resultStat.textContent = cutStat();
     offerPng(result, base, seq);
@@ -533,8 +541,9 @@ let pngUrl = null;
 let pngName = "JaydenART_Background_Bouncer.png";
 async function offerPng(result, base, seq) {
   if (pngUrl) { URL.revokeObjectURL(pngUrl); pngUrl = null; }
-  // A browser with no WebP encoder already handed back a PNG; nothing to add.
-  if (result.blob.type !== "image/webp") { pngBtn.hidden = true; return; }
+  // With no compressed file the download already is the lossless PNG, and a
+  // second identical offer would be noise.
+  if (!result.compressed) { pngBtn.hidden = true; return; }
   pngBtn.hidden = false;
   pngBtn.disabled = true;
   pngBtn.textContent = "PNG…";
@@ -549,7 +558,7 @@ async function offerPng(result, base, seq) {
     pngUrl = URL.createObjectURL(png);
     pngName = (base ? base + "_" : "") + "JaydenART_Background_Bouncer.png";
     pngBtn.disabled = false;
-    pngBtn.textContent = "PNG · " + formatBytes(png.size);
+    pngBtn.textContent = (result.compressed === "png8" ? "Lossless PNG · " : "PNG · ") + formatBytes(png.size);
     const times = png.size / result.blob.size;
     if (times >= 1.5) {
       resultSize.textContent = formatBytes(result.blob.size)
