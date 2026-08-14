@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.7.0] - 2026-08-14
+
+### Fixed
+
+- The model sometimes kept a solid strip of background that touched the subject: a piece of dark bench along a sleeve, a shadow hugging the waist, bits of wood under the hands. No edge filter could question those, because the model called them certain. A new pass can: near the matte's own boundary, each kept pixel is compared with the local colour of the confident subject and the confident background, and a pixel that plainly matches the background while plainly not matching the subject comes down. Evidence only ever lowers alpha, and a pixel that resembles the subject at all is left alone, which is what keeps fabric edges from being chewed. Costs about 60 milliseconds on a typical photo. Two earlier shapes of this pass failed and were not shipped: a projection-based version ate into the dress, and it took a clear-evidence rule to remove the bench without touching a stitch.
+
+### Changed
+
+- A sharper frame of the boat scene for the sample photo.
+
 ## [2.6.0] - 2026-08-14
 
 ### Changed

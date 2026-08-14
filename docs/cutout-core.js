@@ -215,6 +215,75 @@ export function blendPatch(base, bw, bh, patch, px, py, pw, ph, feather) {
   return base;
 }
 
+// The model sometimes keeps a sliver of background that touches the subject,
+// a strip of dark bench along a sleeve, a shadow hugging a waist, solid
+// enough that no edge filter can question it. This pass can: near the matte's
+// own boundary it compares each pixel to the local colours of the confident
+// subject and the confident background, and where a kept pixel plainly
+// matches the background and plainly does not match the subject, its alpha
+// comes down. Evidence only ever lowers alpha, so nothing is invented, and a
+// pixel that resembles the subject at all is left alone, which is what keeps
+// fabric edges from being chewed.
+export function colorRescue(rgba, matte, w, h, rBand = 14, rEst = 24) {
+  const n = w * h;
+  const wF = new Float32Array(n);
+  const wB = new Float32Array(n);
+  const hard = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = matte[i];
+    if (a > 0.95) wF[i] = 1;
+    else if (a < 0.05) wB[i] = 1;
+    if (a > 0.5) hard[i] = 1;
+  }
+  const planes = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+  for (let i = 0; i < n; i++) {
+    planes[0][i] = rgba[i * 4] / 255;
+    planes[1][i] = rgba[i * 4 + 1] / 255;
+    planes[2][i] = rgba[i * 4 + 2] / 255;
+  }
+  // Local mean colour of a confident set, with a wider second look filling
+  // the spots the first radius could not reach.
+  const est = (wgt) => {
+    const d1 = boxBlur(wgt, w, h, rEst);
+    const d2 = boxBlur(wgt, w, h, rEst * 3);
+    const c1 = planes.map((p) => {
+      const t = new Float32Array(n);
+      for (let i = 0; i < n; i++) t[i] = p[i] * wgt[i];
+      return boxBlur(t, w, h, rEst);
+    });
+    const c2 = planes.map((p) => {
+      const t = new Float32Array(n);
+      for (let i = 0; i < n; i++) t[i] = p[i] * wgt[i];
+      return boxBlur(t, w, h, rEst * 3);
+    });
+    return { d1, d2, c1, c2 };
+  };
+  const F = est(wF);
+  const B = est(wB);
+  const bb = boxBlur(hard, w, h, rBand);
+  const out = new Float32Array(matte);
+  for (let i = 0; i < n; i++) {
+    if (bb[i] <= 0.02 || bb[i] >= 0.98) continue;
+    let fD, f0, f1, f2, bD, b0, b1, b2;
+    if (F.d1[i] > 1e-3) { fD = F.d1[i]; f0 = F.c1[0][i]; f1 = F.c1[1][i]; f2 = F.c1[2][i]; }
+    else if (F.d2[i] > 1e-3) { fD = F.d2[i]; f0 = F.c2[0][i]; f1 = F.c2[1][i]; f2 = F.c2[2][i]; }
+    else continue;
+    if (B.d1[i] > 1e-3) { bD = B.d1[i]; b0 = B.c1[0][i]; b1 = B.c1[1][i]; b2 = B.c1[2][i]; }
+    else if (B.d2[i] > 1e-3) { bD = B.d2[i]; b0 = B.c2[0][i]; b1 = B.c2[1][i]; b2 = B.c2[2][i]; }
+    else continue;
+    const r = planes[0][i], g = planes[1][i], bl = planes[2][i];
+    const dF = Math.hypot(r - f0 / fD, g - f1 / fD, bl - f2 / fD);
+    const dB = Math.hypot(r - b0 / bD, g - b1 / bD, bl - b2 / bD);
+    if (dB >= 0.35) continue;
+    let s = (dF - 2 * dB) / 0.15;
+    if (s <= 0) continue;
+    if (s > 1) s = 1;
+    s = s * s * (3 - 2 * s);
+    out[i] = matte[i] * (1 - s);
+  }
+  return out;
+}
+
 // The working size for the refinement pass: big enough that hair detail
 // survives, capped so an 8K photo cannot stall the page.
 export function refineSize(w, h, cap = 2048) {

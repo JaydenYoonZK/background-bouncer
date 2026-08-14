@@ -8,8 +8,8 @@
 import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
-  subjectBounds, blendPatch,
-} from "./cutout-core.js?v=2.6.0";
+  subjectBounds, blendPatch, colorRescue,
+} from "./cutout-core.js?v=2.7.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -373,7 +373,11 @@ export async function removeBackground(source, { width, height }, onProgress) {
   const workRgba = workCtx.getImageData(0, 0, rs.w, rs.h).data;
   const guide = luminance(workRgba, rs.w * rs.h);
   const refined = guidedFilter(guide, matteWork, rs.w, rs.h, 8, 1e-4);
-  const crisp = defringe(crispen(refined, 0.35), 0.22);
+  // Question the kept pixels along the boundary against local colour
+  // evidence: a strip of bench or shadow the model kept as subject plainly
+  // matches the background around it, and comes out here.
+  const rescued = colorRescue(workRgba, refined, rs.w, rs.h);
+  const crisp = defringe(crispen(rescued, 0.35), 0.22);
   onProgress?.("refine", 1);
 
   onProgress?.("encode", 0);

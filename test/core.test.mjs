@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, boxBlur, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
-  removeSmallIslands, subjectBounds, blendPatch, finishOutput,
+  removeSmallIslands, subjectBounds, blendPatch, finishOutput, colorRescue,
 } from "../docs/cutout-core.js";
 
 /* ---- the reference implementations these must match ---- */
@@ -247,6 +247,49 @@ test("decontaminate unmixes the background color out of an edge pixel", () => {
   const rgba = new Uint8ClampedArray([...mixed, 255]);
   decontaminate(rgba, new Float32Array([a]), 1, B);
   assert.ok(Math.abs(rgba[0] - 0) < 2 && Math.abs(rgba[1] - 200) < 2 && Math.abs(rgba[2] - 0) < 2);
+});
+
+test("colorRescue removes a background-coloured sliver but not the subject or distant regions", () => {
+  const w = 64, h = 64, n = w * h;
+  // left half: green subject (alpha 1). right half: brown background (alpha 0).
+  // a brown sliver just inside the subject edge is wrongly kept at alpha 1.
+  const rgba = new Uint8ClampedArray(n * 4);
+  const matte = new Float32Array(n);
+  const paint = (x, y, rgb, a) => {
+    const i = y * w + x;
+    rgba[i * 4] = rgb[0]; rgba[i * 4 + 1] = rgb[1]; rgba[i * 4 + 2] = rgb[2]; rgba[i * 4 + 3] = 255;
+    matte[i] = a;
+  };
+  const GREEN = [40, 170, 80], BROWN = [110, 70, 30];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (x < 32) paint(x, y, GREEN, 1);
+    else paint(x, y, BROWN, 0);
+  }
+  // the wrongly-kept sliver: brown pixels at x 29..31, alpha 1
+  for (let y = 8; y < 56; y++) for (let x = 29; x < 32; x++) paint(x, y, BROWN, 1);
+  const out = colorRescue(rgba, matte, w, h, 6, 8);
+  assert.ok(out[30 * w + 30] < 0.15, "brown sliver near the edge comes down, got " + out[30 * w + 30]);
+  assert.equal(out[30 * w + 8], 1, "green interior stays solid");
+  assert.equal(out[30 * w + 60], 0, "background stays clear");
+});
+
+test("colorRescue leaves everything alone without confident background to learn from", () => {
+  const w = 16, h = 16, n = w * h;
+  const rgba = new Uint8ClampedArray(n * 4).fill(120);
+  const matte = new Float32Array(n).fill(0.8); // nothing below 0.05 anywhere
+  const out = colorRescue(rgba, matte, w, h, 4, 4);
+  for (let i = 0; i < n; i++) assert.equal(out[i], matte[i]);
+});
+
+test("colorRescue never raises alpha", () => {
+  const w = 32, h = 32, n = w * h;
+  const rgba = new Uint8ClampedArray(n * 4);
+  for (let i = 0; i < n; i++) {
+    rgba[i * 4] = (i * 37) % 255; rgba[i * 4 + 1] = (i * 73) % 255; rgba[i * 4 + 2] = (i * 11) % 255; rgba[i * 4 + 3] = 255;
+  }
+  const matte = randomPlane(w, h, 5);
+  const out = colorRescue(rgba, matte, w, h, 4, 6);
+  for (let i = 0; i < n; i++) assert.ok(out[i] <= matte[i] + 1e-9, "alpha can only come down");
 });
 
 test("finishOutput equals decontaminate followed by applyAlpha, pixel for pixel", () => {
