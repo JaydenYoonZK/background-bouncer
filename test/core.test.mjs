@@ -281,6 +281,26 @@ test("colorRescue leaves everything alone without confident background to learn 
   for (let i = 0; i < n; i++) assert.equal(out[i], matte[i]);
 });
 
+test("colorRescue leaves a confident sunlit rim alone even when it matches the bright background", () => {
+  const w = 64, h = 64, n = w * h;
+  const rgba = new Uint8ClampedArray(n * 4);
+  const matte = new Float32Array(n);
+  const paint = (x, y, rgb, a) => {
+    const i = y * w + x;
+    rgba[i * 4] = rgb[0]; rgba[i * 4 + 1] = rgb[1]; rgba[i * 4 + 2] = rgb[2]; rgba[i * 4 + 3] = 255;
+    matte[i] = a;
+  };
+  const GREEN = [40, 170, 80], WHITE = [246, 244, 240];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (x < 29) paint(x, y, GREEN, 1);       // subject
+    else if (x < 32) paint(x, y, WHITE, 1);  // its sunlit rim, model-confident
+    else paint(x, y, WHITE, 0);              // bright background, same colour
+  }
+  const out = colorRescue(rgba, matte, w, h, 6, 8);
+  assert.equal(out[30 * w + 30], 1, "the lit rim survives");
+  assert.equal(out[30 * w + 40], 0, "the background stays clear");
+});
+
 test("colorRescue never raises alpha", () => {
   const w = 32, h = 32, n = w * h;
   const rgba = new Uint8ClampedArray(n * 4);

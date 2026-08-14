@@ -272,6 +272,12 @@ export function colorRescue(rgba, matte, w, h, rBand = 14, rEst = 24) {
     else if (B.d2[i] > 1e-3) { bD = B.d2[i]; b0 = B.c2[0][i]; b1 = B.c2[1][i]; b2 = B.c2[2][i]; }
     else continue;
     const r = planes[0][i], g = planes[1][i], bl = planes[2][i];
+    // A sunlit rim on the subject is near-white and colourless, exactly like
+    // a bright misty background, and the model was sure about it. Removing it
+    // cuts a bite out of a lit shoulder, so a confident bright colourless
+    // pixel is not for this pass to judge.
+    const mx = Math.max(r, g, bl), mn = Math.min(r, g, bl);
+    if (matte[i] >= 0.9 && mn > 0.72 && mx - mn < 0.12) continue;
     const dF = Math.hypot(r - f0 / fD, g - f1 / fD, bl - f2 / fD);
     const dB = Math.hypot(r - b0 / bD, g - b1 / bD, bl - b2 / bD);
     if (dB >= 0.35) continue;

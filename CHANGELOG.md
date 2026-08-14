@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.9.0] - 2026-08-14
+
+### Fixed
+
+- A phone's cutout was quietly a second-class one: the close-up second look was graphics-path only, so a phone ran the small model AND never got the pass that removes kept bench and shadow. It runs on every engine now. On the processor it roughly doubles the wait when the subject is small in the frame, and that trade is taken on purpose: slower and right beats fast and wrong.
+- The colour-evidence pass was taking bites out of sunlit edges. An overexposed rim on a shoulder is near-white and colourless, exactly like a bright misty background, and the pass was removing it. A confident bright colourless pixel is no longer its to judge, with a test pinning the lit rim in place.
+
 ## [2.8.0] - 2026-08-14
 
 ### Fixed

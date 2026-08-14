@@ -9,7 +9,7 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft,
-} from "./cutout-core.js?v=2.8.0";
+} from "./cutout-core.js?v=2.9.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -359,15 +359,18 @@ export async function removeBackground(source, { width, height }, onProgress) {
   const rs = refineSize(width, height, active.provider === "webgpu" ? 3072 : 2048);
   const matteWork = resizePlane(matteModel, S, S, rs.w, rs.h);
 
-  // The close-up second look, where the GPU makes one affordable. It only
-  // sharpens the matte before the guided filter runs, so if anything about it
-  // fails the whole-frame matte is still there and the cutout still happens.
-  if (active.provider === "webgpu") {
-    try {
-      await refineOnSubject(source, session, S, matteModel, width, height,
-        { matte: matteWork, w: rs.w, h: rs.h });
-    } catch { /* the first pass already gave a usable matte */ }
-  }
+  // The close-up second look, on every engine. It was graphics-only at first,
+  // but that quietly made a phone's cutout a second-class one: the phone runs
+  // the small model AND never got the zoom pass, which is exactly where the
+  // kept-bench-and-shadow errors come from. On the processor the second look
+  // roughly doubles the wait for a photo whose subject is small in the frame,
+  // and that is the right trade: slower and right beats fast and wrong. It
+  // only sharpens the matte before the guided filter runs, so if anything
+  // about it fails the whole-frame matte is still there.
+  try {
+    await refineOnSubject(source, session, S, matteModel, width, height,
+      { matte: matteWork, w: rs.w, h: rs.h });
+  } catch { /* the first pass already gave a usable matte */ }
 
   const { ctx: workCtx } = drawToCanvas(source, rs.w, rs.h);
   const workRgba = workCtx.getImageData(0, 0, rs.w, rs.h).data;
