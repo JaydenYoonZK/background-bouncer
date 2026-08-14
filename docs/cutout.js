@@ -9,7 +9,7 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
-} from "./cutout-core.js?v=2.10.0";
+} from "./cutout-core.js?v=2.11.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -80,7 +80,7 @@ export function activeProvider() {
 // the 40 MB CPU engine, which is the tool exactly as it worked before the
 // GPU path existed. Beyond that, asking for an adapter is the only honest
 // test: a browser can expose navigator.gpu and still hand back nothing.
-function onPhone() {
+export function onPhone() {
   if (navigator.userAgentData) return navigator.userAgentData.mobile;
   return /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
 }
@@ -121,7 +121,7 @@ async function gunzip(bytes) {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-async function fetchModelBytes(engine, onProgress) {
+async function fetchModelBytes(engine, onProgress, signal) {
   try {
     const cache = await caches.open(MODEL_CACHE);
     const hit = await cache.match(engine.url);
@@ -137,7 +137,7 @@ async function fetchModelBytes(engine, onProgress) {
       await cache.delete(engine.url);
     }
   } catch { /* private mode may block Cache API; download instead */ }
-  const res = await fetch(engine.url);
+  const res = await fetch(engine.url, { signal });
   if (!res.ok) throw new Error("The model could not be downloaded (HTTP " + res.status + ").");
   const reader = res.body.getReader();
   const chunks = [];
@@ -164,9 +164,44 @@ async function fetchModelBytes(engine, onProgress) {
   return bytes;
 }
 
+// One download shared between the warm-up and the run. warm() used to build
+// the whole session, but unpacking and compiling a model is main-thread work,
+// and on a return visit with a cached model all of it landed in the second
+// between the first mouse move and the click, which is exactly when the
+// sample button has to answer. So the warm-up now only fetches bytes, which
+// is network and cache work the page never feels, and the compile happens
+// inside the run, where the progress bar narrates it.
+let prefetched = null;
+function fetchShared(engine) {
+  if (prefetched && prefetched.url !== engine.url) {
+    // The engine changed underneath an in-flight download, say a GPU failure
+    // in another tab banning the GPU path mid-warm-up. Abandoned unstopped,
+    // that stream would keep reporting into the live progress bar against
+    // the wrong byte total, and cache a model this browser will never use.
+    prefetched.abort.abort();
+    prefetched = null;
+  }
+  if (!prefetched) {
+    const abort = new AbortController();
+    const promise = fetchModelBytes(engine, (s, p) => notify?.(s, p), abort.signal);
+    prefetched = { url: engine.url, promise, abort };
+    promise.catch(() => { if (prefetched && prefetched.promise === promise) prefetched = null; });
+  }
+  return prefetched.promise;
+}
+
+export function prefetchModel() {
+  return (async () => {
+    await fetchShared((await wantsGPU()) ? GPU : CPU);
+  })();
+}
+
 async function start(engine, notifyFn) {
   const ort = await loadRuntime(engine);
-  let bytes = await fetchModelBytes(engine, notifyFn);
+  let bytes = await fetchShared(engine);
+  // Let go of the shared reference so the raw download can be collected once
+  // the session owns its own copy; a later load rereads the Cache API.
+  if (prefetched && prefetched.url === engine.url) prefetched = null;
   if (engine.gzipped) bytes = await gunzip(bytes);
   notifyFn?.("compile", 0);
   const session = await ort.InferenceSession.create(bytes, {

@@ -1488,7 +1488,10 @@ html[data-theme="light"] .card.dropping::after { background: rgba(246, 244, 238,
    the wipe shows no seam, which is the proof. */
 .compare { margin-top: 8px; }
 .compare-stage {
-  touch-action: pan-y;
+  /* Horizontal drags belong to the wipe divider; everything else stays the
+     browser's. pinch-zoom matters: the cutout is exactly what a phone wants
+     to zoom into, and without it a pinch starting on this stage is refused. */
+  touch-action: pan-y pinch-zoom;
   --wipe: 55%;
   position: relative;
   height: 320px;
@@ -1496,7 +1499,6 @@ html[data-theme="light"] .card.dropping::after { background: rgba(246, 244, 238,
   overflow: hidden;
   border: 1px solid var(--line);
   cursor: ew-resize;
-  touch-action: none;
   /* A checkerboard so transparency reads as transparency. The tiles span a
      light and a mid grey, not two near-white greys, so white and near-white
      artwork stays visible against the darker tiles during the wipe. */
@@ -1516,7 +1518,10 @@ html[data-theme="light"] .card.dropping::after { background: rgba(246, 244, 238,
    uses the bright brand chartreuse in BOTH themes (a filled brand surface, like
    the buttons), not the light theme's darker text accent, whose dark icons
    would read low-contrast on the dark-green fill. */
-.compare-divider { position: absolute; top: 0; bottom: 0; left: var(--wipe); width: 4px; background: #abcf37; transform: translateX(-2px); cursor: ew-resize; touch-action: none; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), 0 0 12px rgba(0, 0, 0, 0.4); }
+/* pinch-zoom rather than none: a pinch finger landing on the divider must
+   not veto the gesture, and single-finger drags still reach the stage's
+   pointer handlers because no pan is granted to the browser. */
+.compare-divider { position: absolute; top: 0; bottom: 0; left: var(--wipe); width: 4px; background: #abcf37; transform: translateX(-2px); cursor: ew-resize; touch-action: pinch-zoom; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), 0 0 12px rgba(0, 0, 0, 0.4); }
 .compare-divider:focus-visible { outline: none; }
 .compare-grip { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border-radius: 50%; background: #abcf37; box-shadow: 0 0 0 2.5px rgba(0, 0, 0, 0.45), 0 3px 12px rgba(0, 0, 0, 0.6); cursor: ew-resize; }
 .compare-grip::before { content: "\2039\203A"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--accent-ink); font-size: 17px; font-weight: 800; }
@@ -1527,8 +1532,7 @@ html[data-theme="light"] .card.dropping::after { background: rgba(246, 244, 238,
 .compare-note { margin: 10px 0 0; color: var(--red); font-size: 0.85rem; min-height: 1em; }
 
 @media (max-width: 640px) {
-  .compare-stage {
-  touch-action: pan-y; height: 240px; }
+  .compare-stage { height: 240px; }
   input[type="range"] { width: 100px; }
 }
 

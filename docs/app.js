@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, loadSession, activeProvider } from "./cutout.js?v=2.10.0";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.11.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -41,17 +41,48 @@ function pctFromClientX(clientX) {
   return rect.width ? ((clientX - rect.left) / rect.width) * 100 : wipePct;
 }
 let dragging = false;
+let dragId = null;
+let preDragWipe = 55;
+let touchPending = false;
 compareStage.addEventListener("pointerdown", (e) => {
+  // The second finger of a pinch fires its own pointerdown; that finger is
+  // the browser's, not a second wipe, and it must not move anything or
+  // overwrite the position the first finger saved.
+  if (dragging) return;
   dragging = true;
+  dragId = e.pointerId;
   cancelSweep();
+  // Saved after the sweep snaps to rest, so a cancelled touch restores a
+  // resting position, never a frame the sweep was passing through.
+  preDragWipe = wipePct;
   compareStage.setPointerCapture?.(e.pointerId);
   divider.focus?.({ preventScroll: true });
-  setWipe(pctFromClientX(e.clientX));
+  // A mouse jumps the wipe at once. A finger waits: jumping would put the
+  // divider under the finger, and the second finger of a pinch landing on
+  // the divider would veto the whole gesture. A drag starts wiping on the
+  // first move; a tap positions on release; a pinch touches nothing.
+  touchPending = e.pointerType === "touch";
+  if (!touchPending) setWipe(pctFromClientX(e.clientX));
   e.preventDefault();
 });
-compareStage.addEventListener("pointermove", (e) => { if (dragging) setWipe(pctFromClientX(e.clientX)); });
-compareStage.addEventListener("pointerup", () => { dragging = false; });
-compareStage.addEventListener("pointercancel", () => { dragging = false; });
+compareStage.addEventListener("pointermove", (e) => {
+  if (!dragging || e.pointerId !== dragId) return;
+  touchPending = false;
+  setWipe(pctFromClientX(e.clientX));
+});
+compareStage.addEventListener("pointerup", (e) => {
+  if (!dragging || e.pointerId !== dragId) return;
+  dragging = false;
+  if (touchPending) { touchPending = false; setWipe(pctFromClientX(e.clientX)); }
+});
+// A cancel means the browser took the touch for itself: a pinch or a scroll.
+// That touch was never a wipe, so the divider goes back to where it was.
+compareStage.addEventListener("pointercancel", (e) => {
+  if (!dragging || e.pointerId !== dragId) return;
+  dragging = false;
+  touchPending = false;
+  setWipe(preDragWipe);
+});
 divider.addEventListener("keydown", (e) => {
   cancelSweep();
   const step = e.shiftKey ? 10 : 2;
@@ -93,9 +124,19 @@ if (previewBg) {
 // ---- the tool flow ----
 let beforeUrl = null;
 let afterUrl = null;
+let afterPreviewUrl = null;
 let resultBlob = null;
 let resultName = "cutout.png";
-let busy = false;
+// One run at a time: the engine has a single inference session and two runs
+// interleaving on it is never right. inflight closes when a run starts and
+// its finally always reopens it, whatever else happened. The one run that
+// cannot reach its finally is one frozen with the page and never thawed;
+// lastProgressAt covers that: an engine silent for a minute is not working,
+// and the guard stops honoring it rather than staying closed forever.
+let inflight = false;
+let inflightSeq = 0;
+let lastProgressAt = 0;
+const STALL_MS = 60000;
 let hideTimer = 0;
 
 const STAGE_LABELS = {
@@ -141,7 +182,7 @@ function alertMsg(kind, text) {
 }
 
 async function processFile(file) {
-  if (busy) {
+  if (inflight && performance.now() - lastProgressAt < STALL_MS) {
     alertMsg("info", "One photo at a time. The current one is still being processed.");
     return;
   }
@@ -152,8 +193,17 @@ async function processFile(file) {
   // The guard has to close before the first await, or a second drop landing
   // while this one is still decoding would slip past it and two runs would
   // fight over one inference session.
-  busy = true;
+  inflight = true;
+  lastProgressAt = performance.now();
   const seq = ++runSeq;
+  inflightSeq = seq;
+  // The bar belongs to the run the screen belongs to. An outdated run's
+  // engine cannot be stopped, but its progress reports can be dropped, so
+  // it can never repaint the bar over a screen that moved on without it.
+  const sink = (stage, p) => {
+    lastProgressAt = performance.now();
+    if (seq === runSeq) showProgress(stage, p);
+  };
   clearTimeout(hideTimer);
   const hadFocus = document.activeElement;
   // Decode through an <img>, not createImageBitmap: drawImage of an <img>
@@ -167,27 +217,70 @@ async function processFile(file) {
     if (!img.naturalWidth) throw new Error("empty image");
   } catch {
     URL.revokeObjectURL(url);
-    busy = false;
-    alertMsg("info", "That image could not be read. It may be corrupted or in a format this browser cannot decode.");
+    if (inflightSeq === seq) inflight = false;
+    if (seq === runSeq) {
+      alertMsg("info", "That image could not be read. It may be corrupted or in a format this browser cannot decode.");
+    }
     return;
   }
   toolCard.classList.add("working");
   uploadBtn.disabled = true;
   sampleBtn.disabled = true;
+  restartBtn.disabled = true;
   alerts.innerHTML = "";
   try {
-    const result = await removeBackground(img, { width: img.naturalWidth, height: img.naturalHeight }, showProgress);
+    const result = await removeBackground(img, { width: img.naturalWidth, height: img.naturalHeight }, sink);
     const blob = result.blob;
+    // A run already outdated skips the preview work: decoding a full result
+    // just to throw it away is the most expensive no-op in the file.
+    if (seq !== runSeq) {
+      URL.revokeObjectURL(url);
+      return;
+    }
+    // On a phone the compare stage gets downscaled copies; the full pixels
+    // stay in the blob the download hands over.
+    let beforeView = null;
+    let afterView = null;
+    let bmp = null;
+    try {
+      beforeView = await previewFor(img, img.naturalWidth, img.naturalHeight);
+      if (onPhone() && Math.max(result.width, result.height) > PREVIEW_SIDE) {
+        bmp = await createImageBitmap(blob);
+        afterView = await previewFor(bmp, bmp.width, bmp.height);
+      }
+    } catch {
+      // Previews are a memory optimization, not a requirement; full size works.
+      if (beforeView) URL.revokeObjectURL(beforeView);
+      if (afterView) URL.revokeObjectURL(afterView);
+      beforeView = afterView = null;
+    } finally {
+      bmp?.close?.();
+    }
+    // The screen belongs to whichever run is current. A run outdated by a
+    // restart or a page restore lets go of everything it made and says nothing.
+    if (seq !== runSeq) {
+      URL.revokeObjectURL(url);
+      if (beforeView) URL.revokeObjectURL(beforeView);
+      if (afterView) URL.revokeObjectURL(afterView);
+      return;
+    }
     resultBlob = blob;
     const base = (file.name || "").replace(/\.[^./\\]+$/, "");
     const ext = blob.type === "image/webp" ? "webp" : "png";
     resultName = (base || "cutout") + (base ? "-cutout." : ".") + ext;
     if (beforeUrl) URL.revokeObjectURL(beforeUrl);
     if (afterUrl) URL.revokeObjectURL(afterUrl);
-    beforeUrl = url;
+    if (afterPreviewUrl) { URL.revokeObjectURL(afterPreviewUrl); afterPreviewUrl = null; }
+    if (beforeView) {
+      URL.revokeObjectURL(url);
+      beforeUrl = beforeView;
+    } else {
+      beforeUrl = url;
+    }
     afterUrl = URL.createObjectURL(blob);
+    afterPreviewUrl = afterView;
     imgBefore.src = beforeUrl;
-    imgAfter.src = afterUrl;
+    imgAfter.src = afterPreviewUrl || afterUrl;
     results.hidden = false;
     resultBody.hidden = false;
     downloadBtn.disabled = false;
@@ -202,19 +295,84 @@ async function processFile(file) {
     hideTimer = setTimeout(hideProgress, 350);
   } catch (e) {
     URL.revokeObjectURL(url);
-    alertMsg("info", "The background could not be removed: " + String(e.message || e));
-    hideProgress();
+    // Only the current run may speak; a failure from an outdated one is noise.
+    if (seq === runSeq) {
+      alertMsg("info", "The background could not be removed: " + String(e.message || e));
+      hideProgress();
+    }
   } finally {
-    busy = false;
-    toolCard.classList.remove("working");
-    uploadBtn.disabled = false;
-    sampleBtn.disabled = false;
-    // Disabling a focused button drops keyboard focus to <body>; hand it back.
-    if (document.activeElement === document.body && (hadFocus === uploadBtn || hadFocus === sampleBtn)) {
-      hadFocus.focus({ preventScroll: true });
+    // The guard reopens when the run that closed it ends, current on screen
+    // or not. The ownership check covers one rare shape: a run silent past
+    // the stall window is presumed dead and the guard stops honoring it; if
+    // a new run has taken the guard over and the presumed-dead one then
+    // revives, the guard is no longer its to open.
+    if (inflightSeq === seq) inflight = false;
+    // The screen is another matter: an outdated run leaves it alone, because
+    // whatever bumped the sequence already reset the buttons.
+    if (seq === runSeq) {
+      toolCard.classList.remove("working");
+      uploadBtn.disabled = false;
+      sampleBtn.disabled = false;
+      restartBtn.disabled = false;
+      // Disabling a focused button drops keyboard focus to <body>; hand it back.
+      if (document.activeElement === document.body && (hadFocus === uploadBtn || hadFocus === sampleBtn)) {
+        hadFocus.focus({ preventScroll: true });
+      }
     }
   }
 }
+
+// On a phone the compare stage shows a downscaled copy of each side. The
+// originals stay decoded in the page for as long as the result is on screen,
+// and a 48-megapixel phone photo decodes to about 190 MB; pinch-zooming the
+// page re-rasters it and that spike is enough to take the whole tab down.
+// Downloads are untouched: the full-resolution blob is what gets saved.
+const PREVIEW_SIDE = 1600;
+async function previewFor(source, w, h) {
+  if (!onPhone()) return null;
+  const scale = PREVIEW_SIDE / Math.max(w, h);
+  if (scale >= 1) return null;
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(w * scale));
+  c.height = Math.max(1, Math.round(h * scale));
+  // Under the very memory pressure this preview exists for, canvas memory
+  // can be exhausted and getContext comes back null; full size still works.
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source, 0, 0, c.width, c.height);
+  const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+  return blob ? URL.createObjectURL(blob) : null;
+}
+
+// Everything an outdated run could leave behind on the screen: disabled
+// buttons, a lingering progress bar, a PNG offer that will never finish.
+// One reset, shared by the restart button and the return from the
+// back-forward cache. The inflight guard is deliberately not touched: if
+// the old run is still working it keeps its one-at-a-time claim until it
+// ends or goes silent past the stall window; only the screen is taken back.
+function resetRunState() {
+  runSeq++;
+  clearTimeout(hideTimer);
+  hideProgress();
+  toolCard.classList.remove("working");
+  uploadBtn.disabled = false;
+  sampleBtn.disabled = false;
+  restartBtn.disabled = false;
+  // A PNG still encoding when the sequence moved on resolves into silence;
+  // a button reading "PNG…" forever would be its own dead button.
+  if (pngBtn.disabled) pngBtn.hidden = true;
+}
+
+// Leaving the page mid-run and coming back through the back-forward cache
+// restores the page exactly as it left: buttons disabled for a run that was
+// frozen mid-flight. The sample button was dead until a hard reload. Reset
+// the screen; a finished result is kept. The frozen run either thaws and
+// finishes, reopening the guard, or never comes back and ages out of it.
+addEventListener("pageshow", (e) => {
+  if (e.persisted) resetRunState();
+});
 
 uploadBtn.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", () => {
@@ -237,15 +395,16 @@ sampleBtn.addEventListener("click", async () => {
 });
 
 restartBtn.addEventListener("click", () => {
-  // Starting over outdates anything still in flight, like a PNG mid-encode,
-  // so a late arrival cannot write onto the cleared screen. The previous
-  // photo and cutout are released rather than kept pinned in memory.
-  runSeq++;
+  // Starting over outdates anything still in flight, like a PNG mid-encode
+  // or a whole run, so a late arrival cannot write onto the cleared screen.
+  // The previous photo and cutout are released rather than kept pinned.
+  resetRunState();
   resultBlob = null;
   imgBefore.removeAttribute("src");
   imgAfter.removeAttribute("src");
   if (beforeUrl) { URL.revokeObjectURL(beforeUrl); beforeUrl = null; }
   if (afterUrl) { URL.revokeObjectURL(afterUrl); afterUrl = null; }
+  if (afterPreviewUrl) { URL.revokeObjectURL(afterPreviewUrl); afterPreviewUrl = null; }
   resultBody.hidden = true;
   results.hidden = true;
   alerts.innerHTML = "";
@@ -387,14 +546,19 @@ addEventListener("paste", (e) => {
 });
 
 // Warm the model download as soon as the visitor shows intent, so the wait
-// happens while they are still picking a file. warm() passes no progress sink,
-// so a later processFile() takes over the bar mid-download and the percentage
-// keeps climbing from wherever the warm fetch had reached.
+// happens while they are still picking a file. Only the download: building
+// the session is main-thread work, and on a return visit with the model
+// already cached all of it used to land in the second between the first
+// mouse move and the click, freezing the page exactly when the sample
+// button had to answer. The compile now happens inside the run, where the
+// progress bar narrates it. A later processFile() takes over the download
+// bar mid-flight and the percentage keeps climbing from wherever the warm
+// fetch had reached.
 let warmed = false;
 const warm = () => {
   if (warmed) return;
   warmed = true;
-  loadSession().catch(() => { warmed = false; });
+  prefetchModel().catch(() => { warmed = false; });
 };
 uploadBtn.addEventListener("pointerenter", warm);
 sampleBtn.addEventListener("pointerenter", warm);

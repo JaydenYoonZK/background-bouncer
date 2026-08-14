@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.11.0] - 2026-08-14
+
+### Fixed
+
+- The sample button could feel dead on a return visit. The early warm-up used to build the whole inference session, and with the model already cached that meant unpacking and compiling it on the main thread in the second between the first mouse move and the click, which is exactly when the button had to answer; measured on a fast desktop the page froze for about 1.4 seconds right there. The warm-up now only downloads, which the page never feels, and the compile happens inside the run where the progress bar narrates it.
+- Leaving the page mid-cut and coming back through the browser's back-forward cache restored it exactly as it left: buttons disabled, progress lingering, for a run frozen mid-flight. Nothing was clickable until a hard reload. The page now takes its screen back on that restore, and an outdated run can no longer disturb it afterwards: not the result, not the progress bar, not an error message. One cut still runs at a time, and a frozen run that never comes back ages out of its claim instead of holding it forever. A PNG that was still encoding when the page left no longer strands its button on "PNG…".
+- Pinch-zoom was refused when it started on the compare view, which is the one thing on the page a phone wants to zoom into. The stage and the divider now yield the pinch to the browser and keep only deliberate drags for the wipe. A finger touching the stage also no longer moves the divider on contact; it moved it directly under the finger, so the second finger of a pinch landed on the one element that refused all touches and the gesture died. A drag starts wiping on the first move, a tap positions on release, and a pinch touches nothing.
+- On phones the compare view now shows a downscaled copy of each side instead of the full originals. A 48-megapixel photo decodes to about 190 MB and sat in the page for as long as the result was on screen; pinch-zooming re-rasters it, and that spike could take the whole tab down and reload the page. The download is untouched, full resolution from the real result.
+
 ## [2.10.0] - 2026-08-14
 
 ### Changed

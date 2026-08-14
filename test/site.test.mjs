@@ -99,6 +99,45 @@ test("the 85 MB GPU engine is never pushed at phones or data savers", () => {
   assert.ok(gate !== -1 && use !== -1, "the gate exists and the engine choice goes through it");
 });
 
+test("the warm-up only downloads; the compile stays inside the run", () => {
+  // Building a session is main-thread work. Done during warm(), it lands in
+  // the second between the first mouse move and the click on a return visit,
+  // which is exactly when the sample button has to answer.
+  assert.match(app, /prefetchModel\(\)/, "warm() prefetches bytes");
+  assert.ok(!/loadSession/.test(app), "the page never compiles outside a run");
+  assert.match(cutout, /export function prefetchModel/, "the engine offers a bytes-only warm-up");
+});
+
+test("a page restored from the back-forward cache gets its buttons back", () => {
+  assert.match(app, /pageshow/, "listens for the restore");
+  assert.match(app, /persisted/, "only the cached restore resets, not every load");
+});
+
+test("pinch-zoom is allowed to start anywhere on the compare view", () => {
+  // The 2.10.0 bug was a LATER declaration winning: a duplicate inside the
+  // same block, and a media-query re-declaration for phones. So every
+  // touch-action ever declared for the stage must allow pinch, in every
+  // block it appears in, not just the first.
+  const css = read("docs/styles.css");
+  const stageBlocks = [...css.matchAll(/\.compare-stage[^,{]*\{[^}]*\}/g)];
+  assert.ok(stageBlocks.length >= 1, "the stage is styled");
+  let declared = 0;
+  for (const block of stageBlocks) {
+    for (const m of block[0].matchAll(/touch-action:\s*([^;}]+)/g)) {
+      assert.equal(m[1].trim(), "pan-y pinch-zoom",
+        "every stage touch-action declaration yields pinch and vertical pan");
+      declared++;
+    }
+  }
+  assert.ok(declared >= 1, "the stage declares its touch-action");
+  // The divider rides on top of the stage; a pinch finger landing on it
+  // must not veto the gesture either.
+  const divider = css.match(/\.compare-divider\s*\{[^}]*\}/);
+  assert.ok(divider && /touch-action:\s*pinch-zoom/.test(divider[0]),
+    "the divider yields the pinch too");
+  assert.ok(!/touch-action:\s*none/.test(divider[0]), "the divider never refuses touches outright");
+});
+
 test("the cutout is saved as WebP, with a PNG available on demand", () => {
   assert.match(cutout, /encode\(outCanvas, "image\/webp", WEBP_QUALITY\)/, "the download is WebP");
   assert.match(cutout, /asPng/, "the same pixels can still be had as a PNG");
