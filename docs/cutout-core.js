@@ -290,6 +290,63 @@ export function colorRescue(rgba, matte, w, h, rBand = 14, rEst = 24) {
   return out;
 }
 
+// Bilinear resize of a float plane, in float. The old path went through a
+// canvas, which meant rounding the matte to 8 bits on every hop; a soft hair
+// gradient was stepped twice before it ever reached the output. This keeps
+// the full precision end to end. Sampling matches what a canvas would do:
+// pixel centres, edges clamped.
+export function resizePlaneF(src, sw, sh, dw, dh) {
+  if (sw === dw && sh === dh) return new Float32Array(src);
+  const out = new Float32Array(dw * dh);
+  const xr = sw / dw, yr = sh / dh;
+  for (let y = 0; y < dh; y++) {
+    let sy = (y + 0.5) * yr - 0.5;
+    if (sy < 0) sy = 0; else if (sy > sh - 1) sy = sh - 1;
+    const y0 = Math.floor(sy), y1 = Math.min(sh - 1, y0 + 1), fy = sy - y0;
+    const r0 = y0 * sw, r1 = y1 * sw, ro = y * dw;
+    for (let x = 0; x < dw; x++) {
+      let sx = (x + 0.5) * xr - 0.5;
+      if (sx < 0) sx = 0; else if (sx > sw - 1) sx = sw - 1;
+      const x0 = Math.floor(sx), x1 = Math.min(sw - 1, x0 + 1), fx = sx - x0;
+      const top = src[r0 + x0] + (src[r0 + x1] - src[r0 + x0]) * fx;
+      const bot = src[r1 + x0] + (src[r1 + x1] - src[r1 + x0]) * fx;
+      out[ro + x] = top + (bot - top) * fy;
+    }
+  }
+  return out;
+}
+
+// The local colour of the removed background, per pixel: what was actually
+// behind each part of the subject. The global mean cannot un-mix an edge that
+// sits over dark wood and an edge that sits over bright mist with the same
+// number; this map can. Same two-radius fill as the rescue pass: a wider
+// second look covers the spots the first radius cannot reach.
+export function localBackgroundMap(rgba, matte, w, h, rEst = 24) {
+  const n = w * h;
+  const wB = new Float32Array(n);
+  for (let i = 0; i < n; i++) if (matte[i] < 0.05) wB[i] = 1;
+  const ch = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+  for (let i = 0; i < n; i++) {
+    ch[0][i] = rgba[i * 4] * wB[i];
+    ch[1][i] = rgba[i * 4 + 1] * wB[i];
+    ch[2][i] = rgba[i * 4 + 2] * wB[i];
+  }
+  const d1 = boxBlur(wB, w, h, rEst);
+  const d2 = boxBlur(wB, w, h, rEst * 3);
+  const c1 = ch.map((p) => boxBlur(p, w, h, rEst));
+  const c2 = ch.map((p) => boxBlur(p, w, h, rEst * 3));
+  const r = new Float32Array(n), g = new Float32Array(n), b = new Float32Array(n);
+  const ok = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    if (d1[i] > 1e-3) {
+      r[i] = c1[0][i] / d1[i]; g[i] = c1[1][i] / d1[i]; b[i] = c1[2][i] / d1[i]; ok[i] = 1;
+    } else if (d2[i] > 1e-3) {
+      r[i] = c2[0][i] / d2[i]; g[i] = c2[1][i] / d2[i]; b[i] = c2[2][i] / d2[i]; ok[i] = 1;
+    }
+  }
+  return { r, g, b, ok };
+}
+
 // Soft pixels that touch no solid region are leftovers: the faint ring of a
 // removed fleck, a stray wisp of half-alpha noise floating in the clear. Real
 // soft detail, hair, fur, a genuine edge, always grows out of something
@@ -360,15 +417,23 @@ export function decontaminate(rgba, matte, n, bg) {
 // they were two separate passes over 16 million pixels; one pass shaves real
 // time off exactly the photos that take longest. Same arithmetic as running
 // the two in sequence, which the tests hold it to.
-export function finishOutput(rgba, matte, n, bg) {
+// With a local background map, each edge pixel is un-mixed against what was
+// actually behind it rather than the photo-wide average; the global mean
+// remains the fallback for spots the map could not reach.
+export function finishOutput(rgba, matte, n, bg, map) {
   for (let i = 0; i < n; i++) {
     const a = matte[i];
     const j = i * 4;
     if (a > 0.1 && a < 0.95) {
-      for (let ch = 0; ch < 3; ch++) {
-        const f = (rgba[j + ch] - (1 - a) * bg[ch]) / a;
-        rgba[j + ch] = f < 0 ? 0 : f > 255 ? 255 : f;
-      }
+      let b0 = bg[0], b1 = bg[1], b2 = bg[2];
+      if (map && map.ok[i] > 0.5) { b0 = map.r[i]; b1 = map.g[i]; b2 = map.b[i]; }
+      const ia = 1 - a;
+      let f = (rgba[j] - ia * b0) / a;
+      rgba[j] = f < 0 ? 0 : f > 255 ? 255 : f;
+      f = (rgba[j + 1] - ia * b1) / a;
+      rgba[j + 1] = f < 0 ? 0 : f > 255 ? 255 : f;
+      f = (rgba[j + 2] - ia * b2) / a;
+      rgba[j + 2] = f < 0 ? 0 : f > 255 ? 255 : f;
     }
     rgba[j + 3] = Math.round(a * 255);
   }

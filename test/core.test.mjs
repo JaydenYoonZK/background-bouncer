@@ -4,6 +4,7 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, boxBlur, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
   removeSmallIslands, subjectBounds, blendPatch, finishOutput, colorRescue, dropOrphanSoft,
+  resizePlaneF, localBackgroundMap,
 } from "../docs/cutout-core.js";
 
 /* ---- the reference implementations these must match ---- */
@@ -323,6 +324,60 @@ test("dropOrphanSoft removes floating wisps but keeps soft detail attached to th
   assert.equal(out[15 * w + 16], Math.fround(0.3), "soft edge on the subject survives");
   assert.equal(out[5 * w + 26], 0, "the floating wisp goes");
   assert.equal(out[15 * w + 10], 1, "solid interior untouched");
+});
+
+test("resizePlaneF keeps constants, linear ramps, and identity exact", () => {
+  // identity
+  const src = randomPlane(8, 6, 3);
+  assert.deepEqual([...resizePlaneF(src, 8, 6, 8, 6)], [...src]);
+  // a constant plane stays that constant at any size
+  const flat = new Float32Array(5 * 4).fill(0.37);
+  for (const v of resizePlaneF(flat, 5, 4, 13, 9)) assert.ok(Math.abs(v - 0.37) < 1e-6);
+  // a horizontal linear ramp resamples to a linear ramp (bilinear is exact on planes)
+  const w = 16, h = 4;
+  const ramp = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) ramp[y * w + x] = x / (w - 1);
+  const up = resizePlaneF(ramp, w, h, 31, 4);
+  for (let x = 1; x < 30; x++) {
+    const d1 = up[1 * 31 + x] - up[1 * 31 + x - 1];
+    assert.ok(d1 >= -1e-6, "ramp stays monotone");
+  }
+  // and, unlike the old canvas route, no 8-bit stepping: values between the
+  // 1/255 quantization levels survive
+  const fine = new Float32Array([0.5, 0.5 + 1 / 1024]);
+  const mid = resizePlaneF(fine, 2, 1, 3, 1)[1];
+  assert.ok(mid > 0.5 && mid < 0.5 + 1 / 1024, "sub-8-bit precision preserved, got " + mid);
+});
+
+test("localBackgroundMap learns each side's own background colour", () => {
+  const w = 60, h = 20, n = w * h;
+  const rgba = new Uint8ClampedArray(n * 4);
+  const matte = new Float32Array(n);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    let c, a;
+    if (x < 20) { c = [30, 20, 10]; a = 0; }        // dark wood, removed
+    else if (x < 40) { c = [40, 170, 80]; a = 1; }  // green subject
+    else { c = [240, 240, 235]; a = 0; }            // bright mist, removed
+    rgba[i * 4] = c[0]; rgba[i * 4 + 1] = c[1]; rgba[i * 4 + 2] = c[2]; rgba[i * 4 + 3] = 255;
+    matte[i] = a;
+  }
+  const map = localBackgroundMap(rgba, matte, w, h, 6);
+  const left = 10 * w + 21, right = 10 * w + 38;
+  assert.ok(map.ok[left] > 0.5 && map.ok[right] > 0.5, "both edges have an estimate");
+  assert.ok(map.r[left] < 100, "left edge learned the dark side, r=" + map.r[left]);
+  assert.ok(map.r[right] > 150, "right edge learned the bright side, r=" + map.r[right]);
+});
+
+test("finishOutput uses the local background where the map reaches", () => {
+  // one half-transparent pixel mixed over a dark local background, while the
+  // global mean is bright: only the local number un-mixes it correctly.
+  const F = [0, 200, 0], Blocal = [20, 10, 5], a = 0.5;
+  const mixed = F.map((f, i) => a * f + (1 - a) * Blocal[i]);
+  const rgba = new Uint8ClampedArray([...mixed, 255]);
+  const map = { r: new Float32Array([Blocal[0]]), g: new Float32Array([Blocal[1]]), b: new Float32Array([Blocal[2]]), ok: new Float32Array([1]) };
+  finishOutput(rgba, new Float32Array([a]), 1, [240, 240, 240], map);
+  assert.ok(Math.abs(rgba[1] - 200) < 2, "unmixed against the local background, g=" + rgba[1]);
 });
 
 test("finishOutput equals decontaminate followed by applyAlpha, pixel for pixel", () => {

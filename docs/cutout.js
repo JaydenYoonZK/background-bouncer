@@ -8,8 +8,8 @@
 import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
-  subjectBounds, blendPatch, colorRescue, dropOrphanSoft,
-} from "./cutout-core.js?v=2.9.0";
+  subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
+} from "./cutout-core.js?v=2.10.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -227,26 +227,10 @@ function outputColorSpace(ctx) {
   } catch { return "srgb"; }
 }
 
-// Resizes a single-channel Float32Array through a canvas so the browser's
-// bilinear filtering does the interpolation work.
-function resizePlane(plane, sw, sh, dw, dh) {
-  const src = document.createElement("canvas");
-  src.width = sw;
-  src.height = sh;
-  const sctx = src.getContext("2d");
-  const img = sctx.createImageData(sw, sh);
-  for (let i = 0; i < sw * sh; i++) {
-    const v = Math.round(plane[i] * 255);
-    img.data[i * 4] = v;
-    img.data[i * 4 + 3] = 255;
-  }
-  sctx.putImageData(img, 0, 0);
-  const { ctx } = drawToCanvas(src, dw, dh);
-  const out = ctx.getImageData(0, 0, dw, dh).data;
-  const res = new Float32Array(dw * dh);
-  for (let i = 0; i < dw * dh; i++) res[i] = out[i * 4] / 255;
-  return res;
-}
+// The matte moves between sizes in float now (resizePlaneF): the old canvas
+// route rounded it to 8 bits on every hop, stepping the very gradients a
+// soft hair edge is made of.
+const resizePlane = resizePlaneF;
 
 // High enough that the loss hides inside photographic detail, low enough that
 // the file is a fraction of a PNG. Measured on the sample: 1.5/255 average
@@ -398,6 +382,17 @@ export async function removeBackground(source, { width, height }, onProgress) {
   const os = outputSize(width, height);
   const outW = os.w, outH = os.h;
   const matteFull = outW === rs.w && outH === rs.h ? crisp : resizePlane(crisp, rs.w, rs.h, outW, outH);
+  // What was actually behind each edge, learned at working size and carried
+  // up to the output, so an edge over dark wood and an edge over bright mist
+  // are each un-mixed against their own background rather than the average.
+  const bgW = localBackgroundMap(workRgba, crisp, rs.w, rs.h);
+  const same = outW === rs.w && outH === rs.h;
+  const bgMap = {
+    r: same ? bgW.r : resizePlane(bgW.r, rs.w, rs.h, outW, outH),
+    g: same ? bgW.g : resizePlane(bgW.g, rs.w, rs.h, outW, outH),
+    b: same ? bgW.b : resizePlane(bgW.b, rs.w, rs.h, outW, outH),
+    ok: same ? bgW.ok : resizePlane(bgW.ok, rs.w, rs.h, outW, outH),
+  };
   const { canvas: outCanvas, ctx: outCtx } = drawToCanvas(source, outW, outH, "display-p3");
   const space = outputColorSpace(outCtx);
   const outImage = outCtx.getImageData(0, 0, outW, outH, { colorSpace: space });
@@ -405,7 +400,7 @@ export async function removeBackground(source, { width, height }, onProgress) {
   // Unmix the old background's color out of the edge pixels in the same
   // sweep that writes alpha, so the cutout carries no colored halo onto a
   // new background and a 16-megapixel photo is walked once, not twice.
-  finishOutput(outImage.data, matteFull, n, backgroundColor(outImage.data, matteFull, n));
+  finishOutput(outImage.data, matteFull, n, backgroundColor(outImage.data, matteFull, n), bgMap);
   outCtx.putImageData(outImage, 0, 0);
   // WebP is the file the visitor actually gets. It stores the alpha channel
   // exactly, so the cutout itself is untouched, and spends a little colour

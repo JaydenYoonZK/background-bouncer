@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.10.0] - 2026-08-14
+
+### Changed
+
+- The matte now stays in floating point from the model to the finished pixels. It used to pass through a browser canvas every time it changed size, and a canvas rounds every value to one of 255 steps, twice per photo. Each rounding is invisible alone; together they turn the smooth ramp across a strand of hair into a small staircase. The resizing is now done in plain float math and the ramp arrives at the output as the model drew it.
+- Un-mixing the old background out of the edges now uses the background next to each pixel instead of one colour averaged from the whole photo. On the sample scene that average sat between dark wood and bright mist and was wrong on both sides of the subject. Each soft edge pixel is now compared against what was actually removed around it, so an edge over the bench gives up brown and an edge against the sky gives up white. Where there is no confident background nearby the old whole-photo colour still applies, so nothing is ever worse than before.
+
 ## [2.9.0] - 2026-08-14
 
 ### Fixed
