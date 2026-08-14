@@ -23,15 +23,15 @@
   <meta name="twitter:title" content="Background Bouncer: photo backgrounds gone, privately">
   <meta name="twitter:description" content="A transparent cutout from any photo, made entirely in your browser. Nothing is uploaded, ever.">
   <meta name="twitter:image" content="https://jaydenyoonzk.github.io/background-bouncer/assets/social-preview.png">
-  <script src="theme-boot.js?v=2.12.0"></script>
-  <link rel="stylesheet" href="styles.css?v=2.12.0">
+  <script src="theme-boot.js?v=2.13.0"></script>
+  <link rel="stylesheet" href="styles.css?v=2.13.0">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Background Bouncer",
     "applicationCategory": "MultimediaApplication",
-    "softwareVersion": "2.12.0",
+    "softwareVersion": "2.13.0",
     "operatingSystem": "Any (browser-based)",
     "url": "https://jaydenyoonzk.github.io/background-bouncer/",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -211,6 +211,7 @@
           <div class="compare-divider" id="compare-divider" role="slider" tabindex="0" aria-label="Before and after wipe position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="55"><span class="compare-grip"></span></div>
           <span class="compare-badge badge-before">Before</span>
           <span class="compare-badge badge-after">After</span>
+          <span class="stage-status" id="stage-status" aria-hidden="true" hidden><span class="stage-spinner"></span><span id="stage-status-text">Processing…</span></span>
         </div>
         <div class="preview-bg" role="group" aria-label="Preview background">
           <span class="preview-bg-label">Preview on</span>
@@ -295,6 +296,6 @@
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
 </button>
 
-<script type="module" src="app.js?v=2.12.0"></script>
+<script type="module" src="app.js?v=2.13.0"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.12.0";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.13.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -20,6 +20,8 @@ const fileInput = $("file-input");
 const progress = $("progress");
 const progressFill = $("progress-fill");
 const progressLabel = $("progress-label");
+const stageStatus = $("stage-status");
+const stageStatusText = $("stage-status-text");
 const toolCard = $("tool-card");
 
 function formatBytes(n) {
@@ -158,7 +160,12 @@ function showProgress(stage, p) {
   if (stage === "encode" && p === 1 && cutStart) cutMs = Math.round(performance.now() - cutStart);
   progress.hidden = false;
   const label = STAGE_LABELS[stage];
-  if (label) progressLabel.textContent = label(p);
+  if (label) {
+    progressLabel.textContent = label(p);
+    // The chip on the photo tells the same story, for eyes that are on the
+    // photo rather than on the bar.
+    stageStatusText.textContent = label(p);
+  }
   // download has honest percent; the other stages sweep to keep motion honest
   if (stage === "download") {
     progressFill.classList.remove("indeterminate");
@@ -293,8 +300,10 @@ async function processFile(file) {
     hideTimer = setTimeout(hideProgress, 350);
   } catch (e) {
     // The photo keeps the stage; the message below it says what happened.
+    // The processing chip comes off, because processing has ended.
     // Only the current run may speak; a failure from an outdated one is noise.
     if (seq === runSeq) {
+      stageStatus.hidden = true;
       alertMsg("info", "The background could not be removed: " + String(e.message || e));
       hideProgress();
     }
@@ -362,6 +371,8 @@ function showIncoming() {
   cutMs = 0;
   cancelSweep();
   setWipe(100);
+  stageStatusText.textContent = "Processing…";
+  stageStatus.hidden = false;
   compareStage.classList.add("incoming");
   imgBefore.src = beforeUrl;
   results.hidden = false;
@@ -379,6 +390,7 @@ function resetRunState() {
   runSeq++;
   clearTimeout(hideTimer);
   hideProgress();
+  stageStatus.hidden = true;
   toolCard.classList.remove("working");
   uploadBtn.disabled = false;
   sampleBtn.disabled = false;

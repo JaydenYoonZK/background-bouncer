@@ -9,7 +9,7 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
-} from "./cutout-core.js?v=2.12.0";
+} from "./cutout-core.js?v=2.13.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //

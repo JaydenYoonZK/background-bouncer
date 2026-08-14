@@ -138,6 +138,16 @@ test("pinch-zoom is allowed to start anywhere on the compare view", () => {
   assert.ok(!/touch-action:\s*none/.test(divider[0]), "the divider never refuses touches outright");
 });
 
+test("the processing chip rides the photo while the cut runs", () => {
+  // The progress bar can be scrolled out of view; without the chip a photo
+  // mid-cut looks exactly like a photo done.
+  assert.match(index, /id="stage-status"/, "the chip exists in the stage");
+  assert.match(app, /stageStatusText\.textContent = label\(p\)/, "it mirrors the live stage label");
+  const css = read("docs/styles.css");
+  assert.match(css, /\.compare-stage\.incoming \.stage-status:not\(\[hidden\]\)\s*\{\s*display:\s*flex/,
+    "shown only mid-cut, and only while the run owns the screen");
+});
+
 test("while a cut runs the stage holds the photo with nothing to grab", () => {
   // The incoming photo takes the stage before the cut lands. There is no
   // cutout behind it yet, so the divider and the wipe must not be offered:

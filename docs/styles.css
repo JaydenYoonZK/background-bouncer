@@ -1535,6 +1535,17 @@ html[data-theme="light"] .card.dropping::after { background: rgba(246, 244, 238,
 .compare-grip::before { content: "\2039\203A"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--accent-ink); font-size: 17px; font-weight: 800; }
 .compare-divider:focus-visible .compare-grip { outline: none; box-shadow: 0 0 0 2.5px rgba(0, 0, 0, 0.45), 0 3px 12px rgba(0, 0, 0, 0.6), 0 0 0 3px #101400, 0 0 0 6px #fff; }
 .compare-badge { position: absolute; top: 12px; padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; background: rgba(13, 12, 10, 0.74); color: #f3f0e9; pointer-events: none; }
+/* The processing chip sits on the photo itself while the cut runs, because
+   the progress bar can be scrolled out of view and the photo alone would
+   read as finished. Same pill as the badges, plus a spinning brand ring;
+   the label mirrors the live progress stage. Shown only mid-cut. */
+.stage-status { display: none; position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); align-items: center; gap: 8px; max-width: calc(100% - 24px); white-space: nowrap; padding: 6px 14px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; background: rgba(13, 12, 10, 0.78); color: #f3f0e9; pointer-events: none; }
+.compare-stage.incoming .stage-status:not([hidden]) { display: flex; }
+.stage-spinner { width: 13px; height: 13px; flex: none; border-radius: 50%; border: 2px solid rgba(171, 207, 55, 0.28); border-top-color: #abcf37; animation: stage-spin 0.9s linear infinite; }
+@keyframes stage-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .stage-spinner { animation: none; }
+}
 .badge-before { left: 12px; }
 .badge-after { right: 12px; }
 .compare-note { margin: 10px 0 0; color: var(--red); font-size: 0.85rem; min-height: 1em; }

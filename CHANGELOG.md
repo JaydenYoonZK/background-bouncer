@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.13.0] - 2026-08-14
+
+### Added
+
+- A processing chip on the photo itself while the cut runs. The progress bar lives up in the tool card, so with the page scrolled to the compare view a photo mid-cut looked exactly like a photo done; now a pill with a spinning ring sits on the image and mirrors the live progress stage, and it comes off the moment the cutout lands or the cut fails. Reduced motion gets the pill without the spin.
+
 ## [2.12.0] - 2026-08-14
 
 ### Added
