@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.15.0] - 2026-08-14
+
+### Added
+
+- The compare box's border now reports the run at a glance. While the cut is being made it turns amber, glows, and carries a light sweeping around its edge; when the cutout lands it settles to green; when the run fails, including the photo with nothing to cut, it turns red. The colours come from the site's own palette in both themes, and reduced motion gets a steady amber border with no movement.
+
 ## [2.14.0] - 2026-08-14
 
 ### Added

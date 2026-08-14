@@ -1516,6 +1516,45 @@ html[data-theme="light"] .card.dropping::after { background: rgba(246, 244, 238,
    divider, no After badge, no wipe to grab, because there is nothing to
    compare yet. The photo itself is the receipt that the right image is in. */
 .compare-stage.incoming { pointer-events: none; cursor: default; }
+/* ---- Run status on the box itself ----
+   The border reports the run: amber, glowing and sweeping while the cut is
+   being made, green once the cutout is on the stage, red when the run
+   failed. The sweep is a conic ring riding the border; a browser that
+   cannot animate the angle keeps the pulsing glow, and reduced motion gets
+   a steady amber border with no movement at all. */
+@property --stage-sweep { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.compare-stage.working {
+  border-color: var(--amber);
+  animation: stage-glow 1.5s ease-in-out infinite;
+}
+.compare-stage.working::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px;
+  background: conic-gradient(from var(--stage-sweep),
+    transparent 0turn 0.58turn, var(--amber) 0.79turn, transparent 0.97turn);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: stage-sweep 1.3s linear infinite;
+  pointer-events: none;
+}
+@keyframes stage-sweep { to { --stage-sweep: 1turn; } }
+@keyframes stage-glow {
+  0%, 100% { box-shadow: 0 0 0 1px var(--amber), 0 0 10px 1px var(--amber-soft); }
+  50% { box-shadow: 0 0 0 1px var(--amber), 0 0 26px 6px var(--amber-soft); }
+}
+.compare-stage.done {
+  border-color: var(--green);
+  box-shadow: 0 0 0 1px var(--green), 0 0 14px 2px var(--green-soft);
+}
+.compare-stage.failed {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px var(--red), 0 0 14px 2px var(--red-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .compare-stage.working { animation: none; box-shadow: 0 0 0 1px var(--amber), 0 0 14px 2px var(--amber-soft); }
+  .compare-stage.working::after { animation: none; }
+}
 .compare-stage.incoming .compare-divider,
 .compare-stage.incoming .badge-after { display: none; }
 /* The original sits on top, clipped from the divider leftward, so the left of

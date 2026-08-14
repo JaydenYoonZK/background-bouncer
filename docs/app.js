@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.14.0";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.15.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -288,7 +288,8 @@ async function processFile(file) {
     afterUrl = URL.createObjectURL(blob);
     afterPreviewUrl = afterView;
     imgAfter.src = afterPreviewUrl || afterUrl;
-    compareStage.classList.remove("incoming");
+    compareStage.classList.remove("incoming", "working");
+    compareStage.classList.add("done");
     downloadBtn.disabled = false;
     downloadBtn.textContent = "Download " + (ext === "webp" ? "WebP" : "PNG");
     resultSize.textContent = formatBytes(blob.size);
@@ -304,6 +305,8 @@ async function processFile(file) {
     // Only the current run may speak; a failure from an outdated one is noise.
     if (seq === runSeq) {
       stageStatus.hidden = true;
+      compareStage.classList.remove("working");
+      compareStage.classList.add("failed");
       if (e && e.noSubject) {
         // The model found nothing it believed in, or could not tell the
         // subject from the background at all. Saying so beats an empty file.
@@ -379,7 +382,8 @@ function showIncoming() {
   setWipe(100);
   stageStatusText.textContent = "Processing…";
   stageStatus.hidden = false;
-  compareStage.classList.add("incoming");
+  compareStage.classList.add("incoming", "working");
+  compareStage.classList.remove("done", "failed");
   imgBefore.src = beforeUrl;
   results.hidden = false;
   resultBody.hidden = false;
@@ -397,6 +401,9 @@ function resetRunState() {
   clearTimeout(hideTimer);
   hideProgress();
   stageStatus.hidden = true;
+  // The amber run-glow belongs to a run that no longer owns the screen; a
+  // green or red verdict describes what is still shown, so those stay.
+  compareStage.classList.remove("working");
   toolCard.classList.remove("working");
   uploadBtn.disabled = false;
   sampleBtn.disabled = false;
@@ -441,7 +448,7 @@ restartBtn.addEventListener("click", () => {
   // The previous photo and cutout are released rather than kept pinned.
   resetRunState();
   resultBlob = null;
-  compareStage.classList.remove("incoming");
+  compareStage.classList.remove("incoming", "working", "done", "failed");
   imgBefore.removeAttribute("src");
   imgAfter.removeAttribute("src");
   if (beforeUrl) { URL.revokeObjectURL(beforeUrl); beforeUrl = null; }
