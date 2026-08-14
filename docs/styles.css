@@ -1510,6 +1510,14 @@ html[data-theme="light"] .card.dropping::after { background: rgba(246, 244, 238,
   background-position: 0 0, 12px 12px;
 }
 .compare-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 18px; pointer-events: none; }
+/* An image with no photo yet would render its alt text into the stage. */
+.compare-img:not([src]) { visibility: hidden; }
+/* While the cut is running, the stage holds the incoming photo whole: no
+   divider, no After badge, no wipe to grab, because there is nothing to
+   compare yet. The photo itself is the receipt that the right image is in. */
+.compare-stage.incoming { pointer-events: none; cursor: default; }
+.compare-stage.incoming .compare-divider,
+.compare-stage.incoming .badge-after { display: none; }
 /* The original sits on top, clipped from the divider leftward, so the left of
    the stage shows Before and the right shows the stripped After underneath. */
 #img-before.compare-top { clip-path: inset(0 calc(100% - var(--wipe)) 0 0); }

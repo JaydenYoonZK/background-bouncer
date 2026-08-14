@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.12.0] - 2026-08-14
+
+### Added
+
+- The photo now appears on the page the moment it is readable, before the cut is done. Dropping, pasting, or uploading used to buy a progress bar and nothing else, and on a second photo the previous result kept the screen with nothing saying which image was being worked on. The compare view now shows the incoming photo whole while the progress bar narrates the cut, with no divider and nothing to grab, because there is nothing to compare yet; when the cutout lands, the sweep starts from that full view and walks the background out. If the cut fails, the photo stays with the message under it, so what failed is as visible as what succeeded.
+
 ## [2.11.0] - 2026-08-14
 
 ### Fixed

@@ -138,6 +138,19 @@ test("pinch-zoom is allowed to start anywhere on the compare view", () => {
   assert.ok(!/touch-action:\s*none/.test(divider[0]), "the divider never refuses touches outright");
 });
 
+test("while a cut runs the stage holds the photo with nothing to grab", () => {
+  // The incoming photo takes the stage before the cut lands. There is no
+  // cutout behind it yet, so the divider and the wipe must not be offered:
+  // dragging would reveal bare checkerboard and read as a finished result.
+  assert.match(app, /classList\.add\("incoming"\)/, "the incoming state exists");
+  assert.match(app, /classList\.remove\("incoming"\)/, "and it is left when the result lands");
+  const css = read("docs/styles.css");
+  const stage = css.match(/\.compare-stage\.incoming\s*\{[^}]*\}/);
+  assert.ok(stage && /pointer-events:\s*none/.test(stage[0]), "no wipe to grab mid-cut");
+  assert.match(css, /\.compare-stage\.incoming \.compare-divider[^{]*\{[^}]*display:\s*none/,
+    "no divider mid-cut");
+});
+
 test("the cutout is saved as WebP, with a PNG available on demand", () => {
   assert.match(cutout, /encode\(outCanvas, "image\/webp", WEBP_QUALITY\)/, "the download is WebP");
   assert.match(cutout, /asPng/, "the same pixels can still be had as a PNG");

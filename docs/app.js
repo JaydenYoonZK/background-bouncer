@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.11.0";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.12.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -229,38 +229,47 @@ async function processFile(file) {
   restartBtn.disabled = true;
   alerts.innerHTML = "";
   try {
+    // The photo takes the stage the moment it is readable: shown whole while
+    // the cut happens behind the progress bar, so what is being worked on is
+    // never a mystery. On a phone the stage gets a downscaled copy; the full
+    // pixels stay in the photo and, later, in the blob the download hands over.
+    let beforeView = null;
+    try { beforeView = await previewFor(img, img.naturalWidth, img.naturalHeight); } catch { /* full size then */ }
+    if (seq !== runSeq) {
+      URL.revokeObjectURL(url);
+      if (beforeView) URL.revokeObjectURL(beforeView);
+      return;
+    }
+    if (beforeUrl) URL.revokeObjectURL(beforeUrl);
+    if (beforeView) {
+      URL.revokeObjectURL(url);
+      beforeUrl = beforeView;
+    } else {
+      beforeUrl = url;
+    }
+    showIncoming();
     const result = await removeBackground(img, { width: img.naturalWidth, height: img.naturalHeight }, sink);
     const blob = result.blob;
     // A run already outdated skips the preview work: decoding a full result
     // just to throw it away is the most expensive no-op in the file.
-    if (seq !== runSeq) {
-      URL.revokeObjectURL(url);
-      return;
-    }
-    // On a phone the compare stage gets downscaled copies; the full pixels
-    // stay in the blob the download hands over.
-    let beforeView = null;
+    if (seq !== runSeq) return;
     let afterView = null;
     let bmp = null;
     try {
-      beforeView = await previewFor(img, img.naturalWidth, img.naturalHeight);
       if (onPhone() && Math.max(result.width, result.height) > PREVIEW_SIDE) {
         bmp = await createImageBitmap(blob);
         afterView = await previewFor(bmp, bmp.width, bmp.height);
       }
     } catch {
       // Previews are a memory optimization, not a requirement; full size works.
-      if (beforeView) URL.revokeObjectURL(beforeView);
       if (afterView) URL.revokeObjectURL(afterView);
-      beforeView = afterView = null;
+      afterView = null;
     } finally {
       bmp?.close?.();
     }
     // The screen belongs to whichever run is current. A run outdated by a
     // restart or a page restore lets go of everything it made and says nothing.
     if (seq !== runSeq) {
-      URL.revokeObjectURL(url);
-      if (beforeView) URL.revokeObjectURL(beforeView);
       if (afterView) URL.revokeObjectURL(afterView);
       return;
     }
@@ -268,33 +277,22 @@ async function processFile(file) {
     const base = (file.name || "").replace(/\.[^./\\]+$/, "");
     const ext = blob.type === "image/webp" ? "webp" : "png";
     resultName = (base || "cutout") + (base ? "-cutout." : ".") + ext;
-    if (beforeUrl) URL.revokeObjectURL(beforeUrl);
-    if (afterUrl) URL.revokeObjectURL(afterUrl);
-    if (afterPreviewUrl) { URL.revokeObjectURL(afterPreviewUrl); afterPreviewUrl = null; }
-    if (beforeView) {
-      URL.revokeObjectURL(url);
-      beforeUrl = beforeView;
-    } else {
-      beforeUrl = url;
-    }
+    // showIncoming released the previous result when the photo took the stage.
     afterUrl = URL.createObjectURL(blob);
     afterPreviewUrl = afterView;
-    imgBefore.src = beforeUrl;
     imgAfter.src = afterPreviewUrl || afterUrl;
-    results.hidden = false;
-    resultBody.hidden = false;
+    compareStage.classList.remove("incoming");
     downloadBtn.disabled = false;
     downloadBtn.textContent = "Download " + (ext === "webp" ? "WebP" : "PNG");
     resultSize.textContent = formatBytes(blob.size);
     resultStat.textContent = cutStat();
     offerPng(result, base, seq);
     revealWipe();
-    resultBody.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     // Let the filled bar rest at 100% for a beat before it clears. The handle
     // is kept so the next run can cancel it instead of losing its own bar.
     hideTimer = setTimeout(hideProgress, 350);
   } catch (e) {
-    URL.revokeObjectURL(url);
+    // The photo keeps the stage; the message below it says what happened.
     // Only the current run may speak; a failure from an outdated one is noise.
     if (seq === runSeq) {
       alertMsg("info", "The background could not be removed: " + String(e.message || e));
@@ -344,6 +342,31 @@ async function previewFor(source, w, h) {
   ctx.drawImage(source, 0, 0, c.width, c.height);
   const blob = await new Promise((r) => c.toBlob(r, "image/png"));
   return blob ? URL.createObjectURL(blob) : null;
+}
+
+// The incoming photo takes the stage: shown whole at full wipe, divider and
+// After badge hidden because there is nothing to compare yet, the previous
+// result released because the screen now belongs to the new photo. When the
+// cut lands, the sweep starts from exactly here and walks the background out.
+function showIncoming() {
+  resultBlob = null;
+  imgAfter.removeAttribute("src");
+  if (afterUrl) { URL.revokeObjectURL(afterUrl); afterUrl = null; }
+  if (afterPreviewUrl) { URL.revokeObjectURL(afterPreviewUrl); afterPreviewUrl = null; }
+  if (pngUrl) { URL.revokeObjectURL(pngUrl); pngUrl = null; }
+  pngBtn.hidden = true;
+  downloadBtn.disabled = true;
+  downloadBtn.textContent = "Download";
+  resultSize.textContent = "";
+  resultStat.textContent = "";
+  cutMs = 0;
+  cancelSweep();
+  setWipe(100);
+  compareStage.classList.add("incoming");
+  imgBefore.src = beforeUrl;
+  results.hidden = false;
+  resultBody.hidden = false;
+  resultBody.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
 
 // Everything an outdated run could leave behind on the screen: disabled
@@ -400,6 +423,7 @@ restartBtn.addEventListener("click", () => {
   // The previous photo and cutout are released rather than kept pinned.
   resetRunState();
   resultBlob = null;
+  compareStage.classList.remove("incoming");
   imgBefore.removeAttribute("src");
   imgAfter.removeAttribute("src");
   if (beforeUrl) { URL.revokeObjectURL(beforeUrl); beforeUrl = null; }
