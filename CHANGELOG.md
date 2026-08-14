@@ -3,6 +3,22 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.14.0] - 2026-08-14
+
+### Added
+
+- A photo with no clear subject now gets an honest answer instead of an empty file. When the model keeps under 0.2% of the frame, it found nothing it believed in; when it keeps over 99.5%, it could not tell a subject from the background, which is no cut at all. Either way the tool now says so, apologises, and points at the premium tap-to-select version coming to JaydenART.com, where you point at what should stay.
+
+### Changed
+
+- Cleaner edges from a tighter final alignment. The colour-evidence rounds reshape the matte from colour alone, without looking at where the photo's edges actually run; a tight second guided pass now re-snaps the reshaped boundary onto the real edges before it sets. On the sample this keeps 13% more genuine soft edge and visibly smooths the finger contours and the flecked shoulder line.
+- Smaller files. The WebP quality moves from 0.92 to 0.85, measured before it was touched: the sample cutout drops from 70 KB to 56 KB at an average colour difference of 2.4 parts in 255, and a 16-megapixel photo comes back at a third of a megabyte, a quarter smaller than before, at 1.3 parts in 255. The transparency is exact at both settings, so the cut itself gives up nothing.
+
+### Tried and not shipped
+
+- Pushing the matte harder where the photo draws a hard edge, gentler where it is smooth, moved fewer than one pixel in a thousand: the matte is already committed wherever the photo commits. Not worth a pass over every pixel.
+- Raising the graphics path's refinement ceiling from 3072 to 4096 pixels cost five extra seconds on a 16-megapixel photo and measured worse, not better: at that scale the extra resolution is noise to the guided filter, not detail.
+
 ## [2.13.0] - 2026-08-14
 
 ### Added

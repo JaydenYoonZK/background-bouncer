@@ -9,7 +9,8 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
-} from "./cutout-core.js?v=2.13.0";
+  subjectPresence,
+} from "./cutout-core.js?v=2.14.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -268,9 +269,11 @@ function outputColorSpace(ctx) {
 const resizePlane = resizePlaneF;
 
 // High enough that the loss hides inside photographic detail, low enough that
-// the file is a fraction of a PNG. Measured on the sample: 1.5/255 average
-// colour difference over the kept subject, and no alpha difference at all.
-const WEBP_QUALITY = 0.92;
+// the file is a small fraction of a PNG. Measured on the sample: about 2.4/255
+// average colour difference over the kept subject and no alpha difference at
+// all, for a file 20% smaller than 0.92 gave; on a 16-megapixel photo the
+// difference is 1.3/255 and the saving is a quarter of the file.
+const WEBP_QUALITY = 0.85;
 
 function encode(canvas, type, quality) {
   return new Promise((resolve, reject) => {
@@ -402,6 +405,10 @@ export async function removeBackground(source, { width, height }, onProgress) {
   // local evidence and lets the second round remove what was ambiguous.
   let rescued = colorRescue(workRgba, refined, rs.w, rs.h);
   rescued = colorRescue(workRgba, rescued, rs.w, rs.h);
+  // The rescue rounds change alpha from colour evidence alone, without
+  // looking at where the photo's edges run; a tight second guided pass
+  // re-snaps the reshaped boundary to the real edges before it sets.
+  rescued = guidedFilter(guide, rescued, rs.w, rs.h, 3, 5e-5);
   // A last sweep on the finished matte: refinement can leave flecks that the
   // early island pass, which ran on the raw model output, never saw. Every
   // floating solid speck goes, then every soft wisp attached to nothing.
@@ -409,6 +416,16 @@ export async function removeBackground(source, { width, height }, onProgress) {
     removeSmallIslands(defringe(crispen(rescued, 0.35), 0.22), rs.w, rs.h),
     rs.w, rs.h
   );
+  // A photo with no clear subject gets an honest answer, not an empty file.
+  // Under 0.2% of the frame kept means the model found nothing it believed
+  // in; over 99.5% means it could not tell a subject from the background and
+  // kept everything, which is no cut at all.
+  const presence = subjectPresence(crisp, rs.w * rs.h);
+  if (presence < 0.002 || presence > 0.995) {
+    const err = new Error("no clear subject in the photo");
+    err.noSubject = true;
+    throw err;
+  }
   onProgress?.("refine", 1);
 
   onProgress?.("encode", 0);

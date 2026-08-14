@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.13.0";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.14.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -304,7 +304,13 @@ async function processFile(file) {
     // Only the current run may speak; a failure from an outdated one is noise.
     if (seq === runSeq) {
       stageStatus.hidden = true;
-      alertMsg("info", "The background could not be removed: " + String(e.message || e));
+      if (e && e.noSubject) {
+        // The model found nothing it believed in, or could not tell the
+        // subject from the background at all. Saying so beats an empty file.
+        alertMsg("info", "Sorry, the bouncer could not find a clear subject in this photo, so nothing was cut. A premium version with tap-to-select, where you point at what should stay, is coming to JaydenART.com. Stay tuned.");
+      } else {
+        alertMsg("info", "The background could not be removed: " + String(e.message || e));
+      }
       hideProgress();
     }
   } finally {

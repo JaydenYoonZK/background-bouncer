@@ -168,6 +168,15 @@ export function removeSmallIslands(m, w, h, thresh = 0.5) {
   return out;
 }
 
+// How much of the frame the matte actually keeps. The engine reads this to
+// tell an empty or indiscriminate matte, a photo with no clear subject in
+// it, from a real cut.
+export function subjectPresence(m, n) {
+  let kept = 0;
+  for (let i = 0; i < n; i++) if (m[i] >= 0.5) kept++;
+  return kept / n;
+}
+
 // The box the kept subject occupies, in matte pixels, or null if the model
 // kept nothing. Used to decide whether a second, closer look is worth taking.
 export function subjectBounds(m, w, h, thresh = 0.5) {

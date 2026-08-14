@@ -4,7 +4,7 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, boxBlur, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
   removeSmallIslands, subjectBounds, blendPatch, finishOutput, colorRescue, dropOrphanSoft,
-  resizePlaneF, localBackgroundMap,
+  resizePlaneF, localBackgroundMap, subjectPresence,
 } from "../docs/cutout-core.js";
 
 /* ---- the reference implementations these must match ---- */
@@ -324,6 +324,17 @@ test("dropOrphanSoft removes floating wisps but keeps soft detail attached to th
   assert.equal(out[15 * w + 16], Math.fround(0.3), "soft edge on the subject survives");
   assert.equal(out[5 * w + 26], 0, "the floating wisp goes");
   assert.equal(out[15 * w + 10], 1, "solid interior untouched");
+});
+
+test("subjectPresence reads how much of the frame the matte keeps", () => {
+  const n = 100;
+  assert.equal(subjectPresence(new Float32Array(n), n), 0);
+  assert.equal(subjectPresence(new Float32Array(n).fill(1), n), 1);
+  const half = new Float32Array(n);
+  for (let i = 0; i < 50; i++) half[i] = 0.8;
+  assert.equal(subjectPresence(half, n), 0.5);
+  // soft pixels below half confidence do not count as kept subject
+  assert.equal(subjectPresence(new Float32Array(n).fill(0.3), n), 0);
 });
 
 test("resizePlaneF keeps constants, linear ramps, and identity exact", () => {
