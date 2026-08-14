@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, boxBlur, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
-  removeSmallIslands, subjectBounds, blendPatch, finishOutput, colorRescue,
+  removeSmallIslands, subjectBounds, blendPatch, finishOutput, colorRescue, dropOrphanSoft,
 } from "../docs/cutout-core.js";
 
 /* ---- the reference implementations these must match ---- */
@@ -290,6 +290,19 @@ test("colorRescue never raises alpha", () => {
   const matte = randomPlane(w, h, 5);
   const out = colorRescue(rgba, matte, w, h, 4, 6);
   for (let i = 0; i < n; i++) assert.ok(out[i] <= matte[i] + 1e-9, "alpha can only come down");
+});
+
+test("dropOrphanSoft removes floating wisps but keeps soft detail attached to the subject", () => {
+  const w = 32, h = 32, n = w * h;
+  const m = new Float32Array(n);
+  // a solid block with a genuine soft edge hanging off it
+  for (let y = 10; y < 22; y++) for (let x = 4; x < 16; x++) m[y * w + x] = 1;
+  for (let y = 10; y < 22; y++) m[y * w + 16] = 0.3; // attached soft edge
+  m[5 * w + 26] = 0.4; // an orphan wisp far from anything solid
+  const out = dropOrphanSoft(m, w, h, 3);
+  assert.equal(out[15 * w + 16], Math.fround(0.3), "soft edge on the subject survives");
+  assert.equal(out[5 * w + 26], 0, "the floating wisp goes");
+  assert.equal(out[15 * w + 10], 1, "solid interior untouched");
 });
 
 test("finishOutput equals decontaminate followed by applyAlpha, pixel for pixel", () => {

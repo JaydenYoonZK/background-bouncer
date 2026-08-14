@@ -284,6 +284,22 @@ export function colorRescue(rgba, matte, w, h, rBand = 14, rEst = 24) {
   return out;
 }
 
+// Soft pixels that touch no solid region are leftovers: the faint ring of a
+// removed fleck, a stray wisp of half-alpha noise floating in the clear. Real
+// soft detail, hair, fur, a genuine edge, always grows out of something
+// solid; anything that does not is dropped.
+export function dropOrphanSoft(m, w, h, r = 3) {
+  const n = w * h;
+  const hard = new Float32Array(n);
+  for (let i = 0; i < n; i++) if (m[i] >= 0.5) hard[i] = 1;
+  const near = boxBlur(hard, w, h, r);
+  const out = new Float32Array(m);
+  for (let i = 0; i < n; i++) {
+    if (out[i] > 0 && out[i] < 0.5 && near[i] <= 1e-6) out[i] = 0;
+  }
+  return out;
+}
+
 // The working size for the refinement pass: big enough that hair detail
 // survives, capped so an 8K photo cannot stall the page.
 export function refineSize(w, h, cap = 2048) {

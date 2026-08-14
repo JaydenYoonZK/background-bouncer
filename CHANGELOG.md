@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.8.0] - 2026-08-14
+
+### Fixed
+
+- The colour-evidence pass now runs twice: what the first round clears becomes confident background, which sharpens the local evidence and lets the second round remove what was ambiguous the first time. The dark fragments beside the cuffs come down with it.
+- A final sweep on the finished matte. The early fleck pass ran on the raw model output, so specks that formed during refinement were never seen; now every floating solid speck goes at the end, and after it every soft wisp attached to nothing. Real soft detail always grows out of something solid, so hair is untouched by construction.
+
+### Tried and not shipped
+
+- Matching kept pixels against the photo's whole background palette, not just the local one, removed the last dark flecks inside the bright gaps, and also removed pieces of both hands: sunlit skin is too close to sunlit wood. No guard survived that, so the idea is dead and the flecks it would have removed remain the honest limit of what colour evidence can do. Removing them by hand is what the tap-to-select premium is for.
+
 ## [2.7.0] - 2026-08-14
 
 ### Fixed

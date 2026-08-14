@@ -8,8 +8,8 @@
 import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
-  subjectBounds, blendPatch, colorRescue,
-} from "./cutout-core.js?v=2.7.0";
+  subjectBounds, blendPatch, colorRescue, dropOrphanSoft,
+} from "./cutout-core.js?v=2.8.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -375,9 +375,18 @@ export async function removeBackground(source, { width, height }, onProgress) {
   const refined = guidedFilter(guide, matteWork, rs.w, rs.h, 8, 1e-4);
   // Question the kept pixels along the boundary against local colour
   // evidence: a strip of bench or shadow the model kept as subject plainly
-  // matches the background around it, and comes out here.
-  const rescued = colorRescue(workRgba, refined, rs.w, rs.h);
-  const crisp = defringe(crispen(rescued, 0.35), 0.22);
+  // matches the background around it, and comes out here. Twice: what the
+  // first round clears becomes confident background, which sharpens the
+  // local evidence and lets the second round remove what was ambiguous.
+  let rescued = colorRescue(workRgba, refined, rs.w, rs.h);
+  rescued = colorRescue(workRgba, rescued, rs.w, rs.h);
+  // A last sweep on the finished matte: refinement can leave flecks that the
+  // early island pass, which ran on the raw model output, never saw. Every
+  // floating solid speck goes, then every soft wisp attached to nothing.
+  const crisp = dropOrphanSoft(
+    removeSmallIslands(defringe(crispen(rescued, 0.35), 0.22), rs.w, rs.h),
+    rs.w, rs.h
+  );
   onProgress?.("refine", 1);
 
   onProgress?.("encode", 0);
