@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.15.0";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.16.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -22,6 +22,7 @@ const progressFill = $("progress-fill");
 const progressLabel = $("progress-label");
 const stageStatus = $("stage-status");
 const stageStatusText = $("stage-status-text");
+const dlNote = $("dl-note");
 const toolCard = $("tool-card");
 
 function formatBytes(n) {
@@ -128,7 +129,7 @@ let beforeUrl = null;
 let afterUrl = null;
 let afterPreviewUrl = null;
 let resultBlob = null;
-let resultName = "cutout.png";
+let resultName = "JaydenART_Background_Bouncer.png";
 // One run at a time: the engine has a single inference session and two runs
 // interleaving on it is never right. inflight closes when a run starts and
 // its finally always reopens it, whatever else happened. The one run that
@@ -283,7 +284,7 @@ async function processFile(file) {
     resultBlob = blob;
     const base = (file.name || "").replace(/\.[^./\\]+$/, "");
     const ext = blob.type === "image/webp" ? "webp" : "png";
-    resultName = (base || "cutout") + (base ? "-cutout." : ".") + ext;
+    resultName = (base ? base + "_" : "") + "JaydenART_Background_Bouncer." + ext;
     // showIncoming released the previous result when the photo took the stage.
     afterUrl = URL.createObjectURL(blob);
     afterPreviewUrl = afterView;
@@ -292,6 +293,10 @@ async function processFile(file) {
     compareStage.classList.add("done");
     downloadBtn.disabled = false;
     downloadBtn.textContent = "Download " + (ext === "webp" ? "WebP" : "PNG");
+    // The note explains the WebP-and-PNG pair; a browser whose canvas cannot
+    // encode WebP only ever has the PNG, and the note would describe a file
+    // that does not exist.
+    dlNote.hidden = ext !== "webp";
     resultSize.textContent = formatBytes(blob.size);
     resultStat.textContent = cutStat();
     offerPng(result, base, seq);
@@ -378,6 +383,7 @@ function showIncoming() {
   resultSize.textContent = "";
   resultStat.textContent = "";
   cutMs = 0;
+  dlNote.hidden = true;
   cancelSweep();
   setWipe(100);
   stageStatusText.textContent = "Processing…";
@@ -524,7 +530,7 @@ function save(href, name) {
 // current, because a newer photo landed or the screen was cleared, is dropped.
 let runSeq = 0;
 let pngUrl = null;
-let pngName = "cutout.png";
+let pngName = "JaydenART_Background_Bouncer.png";
 async function offerPng(result, base, seq) {
   if (pngUrl) { URL.revokeObjectURL(pngUrl); pngUrl = null; }
   // A browser with no WebP encoder already handed back a PNG; nothing to add.
@@ -533,10 +539,15 @@ async function offerPng(result, base, seq) {
   pngBtn.disabled = true;
   pngBtn.textContent = "PNG…";
   try {
+    // Let the reveal sweep finish before the encode starts: even a yielding
+    // encode shares the main thread, and the sweep's 900 milliseconds are
+    // the one stretch where every frame is being watched.
+    await new Promise((r) => setTimeout(r, 950));
+    if (seq !== runSeq) return;
     const png = await result.asPng();
     if (seq !== runSeq) return;
     pngUrl = URL.createObjectURL(png);
-    pngName = (base || "cutout") + (base ? "-cutout.png" : ".png");
+    pngName = (base ? base + "_" : "") + "JaydenART_Background_Bouncer.png";
     pngBtn.disabled = false;
     pngBtn.textContent = "PNG · " + formatBytes(png.size);
     const times = png.size / result.blob.size;

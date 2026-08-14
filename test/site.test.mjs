@@ -138,6 +138,20 @@ test("pinch-zoom is allowed to start anywhere on the compare view", () => {
   assert.ok(!/touch-action:\s*none/.test(divider[0]), "the divider never refuses touches outright");
 });
 
+test("saved files carry the JaydenART Background Bouncer name", () => {
+  // The WebP name is built with the run's real extension; asserting the
+  // exact construction means a regression of either file's name fails here.
+  assert.match(app, /"JaydenART_Background_Bouncer\." \+ ext/, "the main download's name");
+  assert.match(app, /"JaydenART_Background_Bouncer\.png"/, "the PNG name");
+  assert.ok(!app.includes('"-cutout'), "the old -cutout suffix is gone");
+});
+
+test("the PNG is assembled with adaptive filtering, canvas as fallback", () => {
+  assert.match(cutout, /encodePng\(/, "the custom encoder runs");
+  assert.match(cutout, /pngColorChunks\(/, "the browser's colour profile is harvested");
+  assert.match(cutout, /encode\(outCanvas, "image\/png"\)/, "the canvas encoder remains the fallback");
+});
+
 test("the box border reports the run: amber working, green done, red failed", () => {
   for (const cls of ['add("incoming", "working")', 'classList.add("done")', 'classList.add("failed")']) {
     assert.ok(app.includes(cls), `app drives the ${cls} state`);

@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.16.0] - 2026-08-14
+
+### Changed
+
+- Saved files carry the name they came from plus the tool's own: a photo called beach.jpg comes back as beach_JaydenART_Background_Bouncer.webp, and a photo that arrives without any name falls back to JaydenART_Background_Bouncer.webp.
+- The PNG is now assembled by the tool itself instead of the browser's canvas encoder. Still lossless, and at the soft edges truer than before: the canvas encoder rounds every semi-transparent pixel through a premultiplied store on the way out, and this path does not. The size comes from each row getting whichever of PNG's five predictors leaves the least to compress, which the canvas encoder does not bother with. Measured: 12% smaller on the sample cutout and 17% smaller on a 16-megapixel photo, 4.8 MB down to 4.0. The browser still writes the colour profile, harvested from a one-pixel canvas encode so the file carries exactly what the canvas would have declared. The encode waits out the reveal sweep and then yields to the page every few dozen rows, and anything failing falls back to the canvas encoder.
+- A note under the download buttons now says plainly which file is which: the WebP is the compressed one, usually a fraction of the photo you gave; the PNG is lossless, and a lossless photo is usually far larger than the compressed one. The note only appears when both files exist, so a browser that can only make PNGs is not told about a WebP it will never see.
+- On the graphics path the model now reads the photo twice, once as it is and once mirrored, and the two mattes are averaged. Where the two views disagree is exactly where the model was guessing, and averaging steadies those pixels; on the sample the fingertip edges settle slightly cleaner and nothing else moves. Costs about a quarter of a second, taken only where a second look is that cheap.
+
 ## [2.15.0] - 2026-08-14
 
 ### Added

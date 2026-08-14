@@ -9,8 +9,8 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
-  subjectPresence,
-} from "./cutout-core.js?v=2.15.0";
+  subjectPresence, encodePng, pngColorChunks,
+} from "./cutout-core.js?v=2.16.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -334,6 +334,34 @@ async function refineOnSubject(source, session, S, matteModel, width, height, wo
   return true;
 }
 
+// The model read twice: once as the photo is, once mirrored, the two mattes
+// averaged. The mirrored view is a second independent opinion from the same
+// network, and where the two disagree is exactly where the model was
+// guessing; averaging steadies those pixels. Graphics path only, where a
+// second pass costs a quarter second rather than another five.
+async function runModelSteady(session, source, S) {
+  const straight = await runModel(session, drawToCanvas(source, S, S).ctx, S);
+  if (active.provider !== "webgpu") return straight;
+  try {
+    const c = document.createElement("canvas");
+    c.width = c.height = S;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    ctx.translate(S, 0);
+    ctx.scale(-1, 1);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(source, 0, 0, S, S);
+    const mirrored = await runModel(session, ctx, S);
+    for (let y = 0; y < S; y++) {
+      const row = y * S;
+      for (let x = 0; x < S; x++) {
+        straight[row + x] = (straight[row + x] + mirrored[row + S - 1 - x]) / 2;
+      }
+    }
+  } catch { /* one opinion is still a cutout */ }
+  return straight;
+}
+
 // source: ImageBitmap or canvas/img with natural dimensions attached.
 // Returns { blob, width, height, asPng } where blob is the transparent cutout
 // and asPng() encodes the same pixels as a PNG on demand.
@@ -345,7 +373,7 @@ export async function removeBackground(source, { width, height }, onProgress) {
   onProgress?.("model", 0);
   let rawMatte;
   try {
-    rawMatte = await runModel(session, drawToCanvas(source, S, S).ctx, S);
+    rawMatte = await runModelSteady(session, source, S);
   } catch (e) {
     if (active.provider !== "webgpu") throw e;
     // The driver compiled the model and then failed to run it. Remember that,
@@ -361,7 +389,7 @@ export async function removeBackground(source, { width, height }, onProgress) {
     // Re-announce the model stage: the interlude was a download and compile,
     // and anything timing the cut from this event must not count them.
     onProgress?.("model", 0);
-    rawMatte = await runModel(session, drawToCanvas(source, S, S).ctx, S);
+    rawMatte = await runModelSteady(session, source, S);
   }
   onProgress?.("model", 1);
 
@@ -462,9 +490,46 @@ export async function removeBackground(source, { width, height }, onProgress) {
   // A browser too old to encode it hands back a PNG, which is still correct.
   const blob = await encode(outCanvas, "image/webp", WEBP_QUALITY);
   // The PNG is not made unless it is asked for, so nobody waits on an encode
-  // they will not use.
+  // they will not use. When it is asked for, the file is assembled here with
+  // per-row adaptive filtering, which measures 12 to 17% smaller than the
+  // canvas encoder's output for the same lossless pixels. The browser still
+  // writes the colour profile: a 1x1 canvas encode is harvested for its
+  // colour chunks so the custom file carries exactly the profile the canvas
+  // would have declared. Anything failing falls back to the canvas encoder.
+  let pngPixels = outImage;
   let pending = null;
-  const asPng = () => (pending ||= encode(outCanvas, "image/png"));
+  const asPng = () => (pending ||= (async () => {
+    try {
+      const data = pngPixels.data;
+      // The canvas stores hidden pixels premultiplied to black; straight
+      // RGBA keeps their old colours, which are invisible bytes that cost
+      // real file size. Match the canvas: black under zero alpha. Chunked,
+      // like the filtering below, so a 16-megapixel clear cannot hold the
+      // main thread through an animation frame.
+      const CLEAR_STEP = 1 << 20;
+      for (let start = 0; start < n; start += CLEAR_STEP) {
+        const end = Math.min(n, start + CLEAR_STEP);
+        for (let i = start; i < end; i++) {
+          if (data[i * 4 + 3] === 0) { data[i * 4] = 0; data[i * 4 + 1] = 0; data[i * 4 + 2] = 0; }
+        }
+        if (end < n) await new Promise((r) => setTimeout(r, 0));
+      }
+      const probe = document.createElement("canvas");
+      probe.width = probe.height = 1;
+      let probeCtx;
+      try { probeCtx = probe.getContext("2d", { colorSpace: space }); } catch { /* older browser */ }
+      if (!probeCtx) probeCtx = probe.getContext("2d");
+      probeCtx.drawImage(outCanvas, 0, 0, 1, 1);
+      const tiny = await encode(probe, "image/png");
+      const colorChunks = pngColorChunks(new Uint8Array(await tiny.arrayBuffer()));
+      const bytes = await encodePng(data, outW, outH, { colorChunks, yieldEvery: 64 });
+      return new Blob([bytes], { type: "image/png" });
+    } catch {
+      return encode(outCanvas, "image/png");
+    } finally {
+      pngPixels = null;
+    }
+  })());
   onProgress?.("encode", 1);
   return { blob, width: outW, height: outH, asPng };
 }

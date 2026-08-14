@@ -225,6 +225,7 @@ button.primary:active {
 .spacer { flex: 1; }
 
 .charcount { color: var(--ink-mute); font-size: 0.85rem; }
+.dl-note { margin: 10px 0 0; color: var(--ink-mute); font-size: 0.85rem; max-width: 62ch; }
 
 /* Stats */
 .stats {

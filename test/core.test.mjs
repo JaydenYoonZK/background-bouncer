@@ -5,7 +5,9 @@ import {
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
   removeSmallIslands, subjectBounds, blendPatch, finishOutput, colorRescue, dropOrphanSoft,
   resizePlaneF, localBackgroundMap, subjectPresence,
+  crc32, pngChunk, pngColorChunks, pngFilterInto, encodePng,
 } from "../docs/cutout-core.js";
+import zlib from "node:zlib";
 
 /* ---- the reference implementations these must match ---- */
 
@@ -324,6 +326,65 @@ test("dropOrphanSoft removes floating wisps but keeps soft detail attached to th
   assert.equal(out[15 * w + 16], Math.fround(0.3), "soft edge on the subject survives");
   assert.equal(out[5 * w + 26], 0, "the floating wisp goes");
   assert.equal(out[15 * w + 10], 1, "solid interior untouched");
+});
+
+test("crc32 and pngChunk match the PNG specification", () => {
+  // The IEND chunk's CRC is a published constant: 0xAE426082.
+  assert.equal(crc32(new Uint8Array([73, 69, 78, 68])), 0xae426082);
+  const chunk = pngChunk("IEND", new Uint8Array(0));
+  assert.deepEqual([...chunk], [0, 0, 0, 0, 73, 69, 78, 68, 0xae, 0x42, 0x60, 0x82]);
+});
+
+test("pngColorChunks keeps profile chunks verbatim and nothing else", () => {
+  const sig = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const ihdr = pngChunk("IHDR", new Uint8Array(13));
+  const srgb = pngChunk("sRGB", new Uint8Array([0]));
+  const time = pngChunk("tIME", new Uint8Array(7));
+  const idat = pngChunk("IDAT", new Uint8Array([1, 2, 3]));
+  const png = new Uint8Array([...sig, ...ihdr, ...srgb, ...time, ...idat, ...pngChunk("IEND", new Uint8Array(0))]);
+  const kept = pngColorChunks(png);
+  assert.equal(kept.length, 1);
+  assert.deepEqual([...kept[0]], [...srgb]);
+});
+
+test("encodePng roundtrips pixels exactly through a real inflate", async () => {
+  const w = 23, h = 17;
+  const rgba = new Uint8ClampedArray(w * h * 4);
+  let s = 5;
+  for (let i = 0; i < rgba.length; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; rgba[i] = s & 255; }
+  const png = await encodePng(rgba, w, h, { yieldEvery: 4 });
+  // signature and IHDR
+  assert.deepEqual([...png.slice(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  const dv = new DataView(png.buffer, png.byteOffset);
+  assert.equal(dv.getUint32(16), w);
+  assert.equal(dv.getUint32(20), h);
+  // find IDAT, inflate, reverse the per-row filters
+  let p = 8, idat = null;
+  while (p + 12 <= png.length) {
+    const len = dv.getUint32(p);
+    const type = String.fromCharCode(png[p + 4], png[p + 5], png[p + 6], png[p + 7]);
+    if (type === "IDAT") idat = png.slice(p + 8, p + 8 + len);
+    p += 12 + len;
+  }
+  const raw = zlib.inflateSync(idat);
+  const stride = w * 4;
+  const out = new Uint8Array(w * h * 4);
+  const paeth = (a, b, c) => {
+    const q = a + b - c, pa = Math.abs(q - a), pb = Math.abs(q - b), pc = Math.abs(q - c);
+    return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+  };
+  for (let y = 0; y < h; y++) {
+    const f = raw[y * (stride + 1)];
+    for (let i = 0; i < stride; i++) {
+      const v = raw[y * (stride + 1) + 1 + i];
+      const left = i >= 4 ? out[y * stride + i - 4] : 0;
+      const up = y > 0 ? out[(y - 1) * stride + i] : 0;
+      const ul = y > 0 && i >= 4 ? out[(y - 1) * stride + i - 4] : 0;
+      const add = f === 0 ? 0 : f === 1 ? left : f === 2 ? up : f === 3 ? (left + up) >> 1 : paeth(left, up, ul);
+      out[y * stride + i] = (v + add) & 255;
+    }
+  }
+  assert.deepEqual([...out], [...rgba], "decoded pixels match the input exactly");
 });
 
 test("subjectPresence reads how much of the frame the matte keeps", () => {
