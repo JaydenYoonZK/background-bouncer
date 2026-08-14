@@ -43,10 +43,20 @@ test("the service worker precache list points at real files", () => {
   }
 });
 
-test("the page ships no inline event handlers or scripts beyond the theme boot", () => {
+test("the page ships no inline event handlers or scripts at all", () => {
   assert.ok(!/ on[a-z]+="/i.test(index), "no inline handlers");
   const inline = index.match(/<script>([\s\S]*?)<\/script>/g) || [];
-  assert.equal(inline.length, 1, "exactly one inline script (the theme boot)");
+  // The theme boot used to live inline, where the page's own CSP silently
+  // blocked it; it is an external file now, so nothing inline remains.
+  assert.equal(inline.length, 0, "no inline scripts (the CSP would block them)");
+  assert.match(index, /<script src="theme-boot\.js\?v=/, "the theme boot loads as a file");
+});
+
+test("the service worker keeps the tool alive offline across version bumps", () => {
+  const sw = readFileSync(join(root, "docs/sw.js"), "utf8");
+  assert.match(sw, /"theme-boot\.js" \+ VERSION/, "theme boot is precached");
+  assert.match(sw, /bouncer-vendor-/, "the ONNX runtime has its own long-lived cache");
+  assert.match(sw, /scopePath \+ "index\.html"/, "offline index.html navigation gets the app, not the 404 page");
 });
 
 const MODELS = [
@@ -77,6 +87,16 @@ test("each engine's declared byte count matches its file", () => {
   const declared = [...cutout.matchAll(/bytes: (\d+)/g)].map((m) => +m[1]).sort((a, b) => a - b);
   const actual = MODELS.map((m) => readFileSync(join(root, m)).length).sort((a, b) => a - b);
   assert.deepEqual(declared, actual, "a wrong byte count makes the progress bar lie");
+});
+
+test("the 85 MB GPU engine is never pushed at phones or data savers", () => {
+  // The download is spent before anything can be checked, so the gate has to
+  // exist up front. These are the three signals it must consult.
+  assert.match(cutout, /saveData/, "respects the browser's data-saving switch");
+  assert.match(cutout, /userAgentData/, "asks the browser whether this is a phone");
+  const gate = cutout.indexOf("wantsGPU");
+  const use = cutout.indexOf("await wantsGPU()");
+  assert.ok(gate !== -1 && use !== -1, "the gate exists and the engine choice goes through it");
 });
 
 test("the cutout is saved as WebP, with a PNG available on demand", () => {

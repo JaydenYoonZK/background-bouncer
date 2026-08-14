@@ -4,13 +4,20 @@
    requests pass through untouched. The cache name carries the release version
    and old caches are dropped on activate. */
 
-const VERSION = "?v=2.4.0";
+const VERSION = "?v=2.5.0";
 const CACHE = "background-bouncer-" + VERSION;
+// The ONNX runtime lives in its own cache, filled as it is used and never
+// dropped on a version bump: precaching it would force every visitor to
+// download both engines' runtimes up front, and deleting it with the shell
+// would break the tool offline until the next online run. It is pinned to the
+// vendored onnxruntime build; bump the name when the vendor files change.
+const VENDOR_CACHE = "bouncer-vendor-1";
 const SHELL = [
   "./",
   "404.html",
   "notfound.js" + VERSION,
   "styles.css" + VERSION,
+  "theme-boot.js" + VERSION,
   "app.js" + VERSION,
   "cutout.js" + VERSION,
   "cutout-core.js" + VERSION,
@@ -40,7 +47,20 @@ addEventListener("fetch", (event) => {
   if (new URL(req.url).origin !== location.origin) return;
   // The model is cached by cutout.js in its own bucket; leave it alone here so
   // it is not stored a second time in the shell cache.
-  if (new URL(req.url).pathname.includes("/models/")) return;
+  const path = new URL(req.url).pathname;
+  if (path.includes("/models/")) return;
+  // Runtime files go to the long-lived vendor cache, cache-first.
+  if (path.includes("/vendor/")) {
+    event.respondWith((async () => {
+      const cache = await caches.open(VENDOR_CACHE);
+      const hit = await cache.match(req);
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res && res.ok) cache.put(req, res.clone());
+      return res;
+    })());
+    return;
+  }
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
 
@@ -51,12 +71,14 @@ addEventListener("fetch", (event) => {
     // offline deep link gets the not-found page rather than a silent home.
     if (req.mode === "navigate") {
       const scopePath = new URL("./", location.href).pathname;
+      // index.html is the same page as the scope root; offline it must get
+      // the cached app, not the not-found page.
+      const isRoot = path === scopePath || path === scopePath + "index.html";
       try {
         const res = await fetch(req);
-        if (res && res.ok && new URL(req.url).pathname === scopePath) cache.put("./", res.clone());
+        if (res && res.ok && isRoot) cache.put("./", res.clone());
         return res;
       } catch (error) {
-        const isRoot = new URL(req.url).pathname === scopePath;
         const fallback = (!isRoot && await cache.match("404.html")) || await cache.match("./");
         if (fallback) return fallback;
         throw error;

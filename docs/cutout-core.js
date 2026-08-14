@@ -232,10 +232,16 @@ export function refineSize(w, h, cap = 2048) {
 // So the output area is bounded while the aspect ratio is kept. The common case
 // (a 12MP photo, ~12.2M pixels) is under the cap and passes through untouched;
 // only very large images are scaled down, which is invisible for web use.
-export function outputSize(w, h, maxArea = 16000000) {
-  if (w * h <= maxArea) return { w, h, scale: 1 };
-  const scale = Math.sqrt(maxArea / (w * h));
-  // Floor, not round, so the capped area is always at or under the ceiling.
+export function outputSize(w, h, maxArea = 16000000, maxSide = 16383) {
+  // Two ceilings: total area for the canvas memory a mobile browser will
+  // give, and side length because WebP cannot encode a dimension past 16383,
+  // so a long panorama under the area cap could still fail to save.
+  let scale = 1;
+  if (w * h > maxArea) scale = Math.sqrt(maxArea / (w * h));
+  const side = Math.max(w, h) * scale;
+  if (side > maxSide) scale *= maxSide / side;
+  if (scale === 1) return { w, h, scale: 1 };
+  // Floor, not round, so the capped result is always at or under the ceilings.
   return { w: Math.max(1, Math.floor(w * scale)), h: Math.max(1, Math.floor(h * scale)), scale };
 }
 

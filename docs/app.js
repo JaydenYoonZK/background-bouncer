@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, loadSession } from "./cutout.js?v=2.4.0";
+import { removeBackground, loadSession } from "./cutout.js?v=2.5.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -93,6 +93,7 @@ let afterUrl = null;
 let resultBlob = null;
 let resultName = "cutout.png";
 let busy = false;
+let hideTimer = 0;
 
 const STAGE_LABELS = {
   download: (p) => `Sizing up the crowd… ${Math.round(p * 100)}%`,
@@ -129,11 +130,21 @@ function alertMsg(kind, text) {
 }
 
 async function processFile(file) {
-  if (busy) return;
+  if (busy) {
+    alertMsg("info", "One photo at a time. The current one is still being processed.");
+    return;
+  }
   if (file.type && !file.type.startsWith("image/")) {
     alertMsg("info", "That does not look like an image. Drop a JPG, PNG, or WebP.");
     return;
   }
+  // The guard has to close before the first await, or a second drop landing
+  // while this one is still decoding would slip past it and two runs would
+  // fight over one inference session.
+  busy = true;
+  const seq = ++runSeq;
+  clearTimeout(hideTimer);
+  const hadFocus = document.activeElement;
   // Decode through an <img>, not createImageBitmap: drawImage of an <img>
   // honors EXIF orientation on every engine, so a portrait phone photo comes
   // out upright instead of sideways on browsers that hand back raw pixels.
@@ -145,10 +156,10 @@ async function processFile(file) {
     if (!img.naturalWidth) throw new Error("empty image");
   } catch {
     URL.revokeObjectURL(url);
+    busy = false;
     alertMsg("info", "That image could not be read. It may be corrupted or in a format this browser cannot decode.");
     return;
   }
-  busy = true;
   toolCard.classList.add("working");
   uploadBtn.disabled = true;
   sampleBtn.disabled = true;
@@ -171,11 +182,12 @@ async function processFile(file) {
     downloadBtn.disabled = false;
     downloadBtn.textContent = "Download " + (ext === "webp" ? "WebP" : "PNG");
     resultSize.textContent = formatBytes(blob.size);
-    offerPng(result, base);
+    offerPng(result, base, seq);
     setWipe(55);
     resultBody.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-    // Let the filled bar rest at 100% for a beat before it clears.
-    setTimeout(hideProgress, 350);
+    // Let the filled bar rest at 100% for a beat before it clears. The handle
+    // is kept so the next run can cancel it instead of losing its own bar.
+    hideTimer = setTimeout(hideProgress, 350);
   } catch (e) {
     URL.revokeObjectURL(url);
     alertMsg("info", "The background could not be removed: " + String(e.message || e));
@@ -185,6 +197,10 @@ async function processFile(file) {
     toolCard.classList.remove("working");
     uploadBtn.disabled = false;
     sampleBtn.disabled = false;
+    // Disabling a focused button drops keyboard focus to <body>; hand it back.
+    if (document.activeElement === document.body && (hadFocus === uploadBtn || hadFocus === sampleBtn)) {
+      hadFocus.focus({ preventScroll: true });
+    }
   }
 }
 
@@ -209,6 +225,15 @@ sampleBtn.addEventListener("click", async () => {
 });
 
 restartBtn.addEventListener("click", () => {
+  // Starting over outdates anything still in flight, like a PNG mid-encode,
+  // so a late arrival cannot write onto the cleared screen. The previous
+  // photo and cutout are released rather than kept pinned in memory.
+  runSeq++;
+  resultBlob = null;
+  imgBefore.removeAttribute("src");
+  imgAfter.removeAttribute("src");
+  if (beforeUrl) { URL.revokeObjectURL(beforeUrl); beforeUrl = null; }
+  if (afterUrl) { URL.revokeObjectURL(afterUrl); afterUrl = null; }
   resultBody.hidden = true;
   results.hidden = true;
   alerts.innerHTML = "";
@@ -236,9 +261,12 @@ function save(href, name) {
 // The small file is ready the moment the cutout is. The PNG of the same
 // pixels is encoded quietly afterwards, so anyone who needs one can still
 // take it, and so the two sizes can be compared honestly rather than claimed.
+// Each run carries a sequence number; a result whose number is no longer
+// current, because a newer photo landed or the screen was cleared, is dropped.
+let runSeq = 0;
 let pngUrl = null;
 let pngName = "cutout.png";
-async function offerPng(result, base) {
+async function offerPng(result, base, seq) {
   if (pngUrl) { URL.revokeObjectURL(pngUrl); pngUrl = null; }
   // A browser with no WebP encoder already handed back a PNG; nothing to add.
   if (result.blob.type !== "image/webp") { pngBtn.hidden = true; return; }
@@ -247,8 +275,7 @@ async function offerPng(result, base) {
   pngBtn.textContent = "PNG…";
   try {
     const png = await result.asPng();
-    // A newer photo may have finished while this encode was running.
-    if (resultBlob !== result.blob) return;
+    if (seq !== runSeq) return;
     pngUrl = URL.createObjectURL(png);
     pngName = (base || "cutout") + (base ? "-cutout.png" : ".png");
     pngBtn.disabled = false;
@@ -259,7 +286,9 @@ async function offerPng(result, base) {
         + " · " + (times < 10 ? times.toFixed(1) : Math.round(times)) + "× smaller than PNG";
     }
   } catch {
-    pngBtn.hidden = true;
+    // Only the run that owns the screen may hide the button; a stale encode
+    // failing must not take away the current result's PNG.
+    if (seq === runSeq) pngBtn.hidden = true;
   }
 }
 
@@ -281,12 +310,15 @@ addEventListener("dragleave", (e) => {
   if (!isFileDrag(e)) return;
   if (--dragDepth <= 0) { dragDepth = 0; toolCard.classList.remove("dropping"); }
 });
-addEventListener("dragover", (e) => { if (isFileDrag(e)) e.preventDefault(); });
+// Every drag is neutralized, not just file drags: an image or link dragged in
+// from another tab carries no "Files" entry, and the browser's default for
+// that drop is to navigate away, taking an un-downloaded cutout with it.
+addEventListener("dragover", (e) => e.preventDefault());
 addEventListener("drop", (e) => {
+  e.preventDefault();
   dragDepth = 0;
   toolCard.classList.remove("dropping");
   if (!isFileDrag(e)) return;
-  e.preventDefault();
   const file = e.dataTransfer.files[0];
   if (file) processFile(file);
 });

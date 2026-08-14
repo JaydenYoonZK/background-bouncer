@@ -7,42 +7,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; base-uri 'none'; form-action 'none'">
   <title>Background Bouncer: free background remover, right in your browser</title>
-  <meta name="description" content="Remove the background from any photo and get a transparent PNG back, free. A neural network finds the subject and keeps the hair and fur, and it all runs in your browser: no upload, no sign-up, the picture never leaves your device.">
+  <meta name="description" content="Remove the background from any photo and get a transparent cutout back, free. A neural network finds the subject and keeps the hair and fur, and it all runs in your browser: no upload, no sign-up, the picture never leaves your device.">
   <link rel="canonical" href="https://jaydenyoonzk.github.io/background-bouncer/">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d0c0a'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-size='32'%3E%F0%9F%95%B4%EF%B8%8F%3C/text%3E%3C/svg%3E">
   <meta property="og:title" content="Background Bouncer: photo backgrounds gone, privately">
-  <meta property="og:description" content="A transparent PNG from any photo, made entirely in your browser. Nothing is uploaded, ever.">
+  <meta property="og:description" content="A transparent cutout from any photo, made entirely in your browser. Nothing is uploaded, ever.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://jaydenyoonzk.github.io/background-bouncer/">
   <meta property="og:image" content="https://jaydenyoonzk.github.io/background-bouncer/assets/social-preview.png">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="640">
-  <meta property="og:image:alt" content="Background Bouncer turning a photo into a transparent PNG cutout">
+  <meta property="og:image:alt" content="Background Bouncer turning a photo into a transparent cutout">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Background Bouncer: photo backgrounds gone, privately">
-  <meta name="twitter:description" content="A transparent PNG from any photo, made entirely in your browser. Nothing is uploaded, ever.">
+  <meta name="twitter:description" content="A transparent cutout from any photo, made entirely in your browser. Nothing is uploaded, ever.">
   <meta name="twitter:image" content="https://jaydenyoonzk.github.io/background-bouncer/assets/social-preview.png">
-  <script>
-    (function () {
-      var t = new URLSearchParams(location.search).get("theme");
-      if (!t) { try { t = localStorage.getItem("theme"); } catch (e) { /* storage may be blocked */ } }
-      if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-      document.documentElement.dataset.theme = t;
-      var m = document.createElement("meta");
-      m.name = "theme-color";
-      m.content = t === "light" ? "#f6f4ee" : "#0d0c0a";
-      document.head.appendChild(m);
-    })();
-  </script>
-  <link rel="stylesheet" href="styles.css?v=2.4.0">
+  <script src="theme-boot.js?v=2.5.0"></script>
+  <link rel="stylesheet" href="styles.css?v=2.5.0">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Background Bouncer",
     "applicationCategory": "MultimediaApplication",
-    "softwareVersion": "2.4.0",
+    "softwareVersion": "2.5.0",
     "operatingSystem": "Any (browser-based)",
     "url": "https://jaydenyoonzk.github.io/background-bouncer/",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -131,7 +120,7 @@
     <div class="header-copy">
       <p class="eyebrow">Background Bouncer</p>
       <h1>The background's not on the list.</h1>
-      <p class="lede">Drop in a photo and the bouncer checks the guest list: your subject stays, down to the last strand of hair, fur, or whisker, and everything behind it gets walked to the door. What comes back is a clean transparent PNG, ready for a new backdrop, a thumbnail, or a sticker.</p>
+      <p class="lede">Drop in a photo and the bouncer checks the guest list: your subject stays, down to the last strand of hair, fur, or whisker, and everything behind it gets walked to the door. What comes back is a clean transparent cutout, small enough to actually send, ready for a new backdrop, a thumbnail, or a sticker.</p>
       <p class="lede lede-kick">No uploads. No accounts. No line. The whole door runs on your device. 🕴️</p>
       <p class="privacy"><span class="privacy-lock" aria-hidden="true">🔒</span><span>Runs entirely in your browser. Your photo is never uploaded or stored: no requests, no analytics. The model downloads once, 40 to 85&nbsp;MB depending on your browser, and works offline after that.</span></p>
     </div>
@@ -232,8 +221,8 @@
         </div>
       </div>
       <div class="toolbar output-actions">
-        <button id="download" class="primary" type="button" disabled aria-label="Download the transparent cutout" data-tip="Save the cutout, transparent and small enough to send" data-tip-off="Nothing to download yet">Download</button>
-        <button id="download-png" type="button" hidden aria-label="Download the same cutout as a PNG" data-tip="Same cutout as a PNG: much larger, accepted anywhere">PNG</button>
+        <button id="download" class="primary" type="button" disabled data-tip="Save the cutout, transparent and small enough to send" data-tip-off="Nothing to download yet">Download</button>
+        <button id="download-png" type="button" hidden data-tip="Same cutout as a PNG: much larger, accepted anywhere">PNG</button>
         <button id="restart" type="button" aria-label="Start over with another photo" data-tip="Clear this photo and pick another">Another photo</button>
         <span class="charcount" id="result-size"></span>
       </div>
@@ -242,9 +231,9 @@
 
   <h2 class="section-title" id="how"><span aria-hidden="true">🧠</span> How the vanishing works</h2>
   <p>A photo does not say which pixels are the subject, so the tool asks a neural network. BiRefNet, the high-resolution segmentation model from Zheng Peng and colleagues' <a href="https://github.com/ZhengPeng7/BiRefNet" target="_blank" rel="noopener">Bilateral Reference</a> research, studies the whole picture and paints a probability map: this pixel is the dog, this pixel is the floor. It is unusually good at the hard cases, a pale hand against pale wood or a single strand against a bright sky, where a lighter model gives up and leaves a smudge.</p>
-  <p>The map is sharp, but the model reads your photo on a square working canvas, so its edges are only as fine as that canvas allows. A second pass fixes this: a guided filter reads the actual edges of your photo at full detail and re-attaches the mask to them, which is how single hairs and whiskers make it into the cutout. A final curve snaps the sure areas fully solid or fully clear, leaving softness only where the photo itself is soft.</p>
+  <p>The map is sharp, but the model reads your photo on a square working canvas, so its edges are only as fine as that canvas allows. A second pass fixes this: a guided filter reads the actual edges of your photo, at a working size of up to 2048 pixels, and re-attaches the mask to them, which is how single hairs and whiskers make it into the cutout. A final curve snaps the sure areas fully solid or fully clear, leaving softness only where the photo itself is soft.</p>
   <p>Everything runs on ONNX Runtime, inside your browser. If the browser can reach your graphics chip, the model runs there at full resolution and a photo takes about a quarter of a second. If it cannot, the same work happens on the processor in a worker, which keeps the page responsive and takes a few seconds. Either way your photo is being studied on your own machine, not on a server farm.</p>
-  <p>What comes back is a WebP that keeps its transparency exactly and throws away only a trace of colour the eye cannot locate: on the sample photo the average pixel differs from the PNG by one and a half parts in 255, and the file is about a tenth of the size. That is the difference between a cutout you can send in a message and one you cannot. If something you use insists on a PNG, the same pixels are one click away.</p>
+  <p>What comes back is a WebP that keeps its transparency exactly and throws away only a trace of colour the eye cannot locate: on the sample photo the average pixel differs from the PNG by about two parts in 255, and the file is 72 KB where the PNG is 402. That is the difference between a cutout you can send in a message and one you cannot. If something you use insists on a PNG, the same pixels are one click away.</p>
 
   <h2 class="section-title" id="private"><span aria-hidden="true">🔒</span> Private by construction</h2>
   <p>Background removal sites usually mean uploading your photo to someone's server. This one cannot upload anything: the page's Content Security Policy sets <code>connect-src 'self'</code>, so the browser itself refuses any request except fetching the page's own files. Family photos, ID pictures, unreleased product shots: they all stay in your RAM and nowhere else.</p>
@@ -261,7 +250,7 @@
     <div class="faq-item">
     <h3 class="faq-q"><button type="button" id="faq-b2" aria-expanded="false" aria-controls="faq-a2"><span>Does it handle hair and fur?</span><span class="faq-icon" aria-hidden="true"></span></button></h3>
     <div class="faq-a" id="faq-a2" role="region" aria-labelledby="faq-b2" hidden>
-      <div class="faq-a-inner"><p>Yes, that is the point of the second pass. The neural network gets the shape right, and the guided filter re-cuts the edge against the full-resolution photo, so strands that are thinner than the model's canvas still survive. Try the sample: the hat brim, the wool knit, and her hands resting on the wooden boat rim, all against a soft misty lake, are exactly this problem.</p></div>
+      <div class="faq-a-inner"><p>Yes, that is the point of the second pass. The neural network gets the shape right, and the guided filter re-cuts the edge against your photo at up to 2048 pixels of working detail, so strands that are thinner than the model's canvas still survive. Try the sample: the hat brim, the wool knit, and her hands resting on the wooden boat rim, all against a soft misty lake, are exactly this problem.</p></div>
     </div>
     </div>
     <div class="faq-item">
@@ -273,7 +262,7 @@
     <div class="faq-item">
     <h3 class="faq-q"><button type="button" id="faq-b3" aria-expanded="false" aria-controls="faq-a3"><span>Why is the first run slow?</span><span class="faq-icon" aria-hidden="true"></span></button></h3>
     <div class="faq-a" id="faq-a3" role="region" aria-labelledby="faq-b3" hidden>
-      <div class="faq-a-inner"><p>The first run downloads the neural network. If your browser can reach your graphics chip it gets the full-size model, about 85&nbsp;MB, and cuts in roughly a quarter of a second. Otherwise it gets a smaller one, about 40&nbsp;MB, and takes a few seconds on the processor. Either way the model goes into your browser's cache, so every run after that skips the download and works offline.</p></div>
+      <div class="faq-a-inner"><p>The first run downloads the neural network. On a computer whose browser can reach the graphics chip it gets the full-size model, about 85&nbsp;MB, and cuts in roughly a quarter of a second. On a phone, or when data saving is switched on, it uses the smaller 40&nbsp;MB model on the processor instead: the download matters more there, and the result is still the same cutout, in a few seconds. Either way the model goes into your browser's cache, so every run after that skips the download and works offline.</p></div>
     </div>
     </div>
     <div class="faq-item">
@@ -305,6 +294,6 @@
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
 </button>
 
-<script type="module" src="app.js?v=2.4.0"></script>
+<script type="module" src="app.js?v=2.5.0"></script>
 </body>
 </html>

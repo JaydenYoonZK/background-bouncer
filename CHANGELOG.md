@@ -3,6 +3,23 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.5.0] - 2026-08-14
+
+### Changed
+
+- The 85 MB graphics model is no longer offered to phones, or to anyone who switched on data saving in their browser. That download is the whole cost of the fast path and it is spent before anything can be checked, so the decision is now made up front; both keep the 40 MB engine, which is the tool as it worked before the graphics path existed. The browser's connection-speed guess was tried as a third signal and rejected: it called a wired desktop "3g".
+
+### Fixed
+
+- A graphics driver that accepted the model and then failed to run it used to leave the tool broken until reload, and would be walked into the same failure on every visit. It now finishes the photo on the processor instead, remembers the failure for next time, and lets go of the 85 MB that browser will never use.
+- A truncated model download could be cached and then fail on every visit after. Downloads are now checked against the expected byte count before caching, and a bad cached copy is evicted rather than served forever.
+- The ONNX runtime was cached in the version's own bucket, so every release wiped it and the tool stopped working offline until the next online run. It lives in its own long-lived cache now, and offline use survives version bumps. Navigating straight to index.html while offline also gets the app now instead of the not-found page.
+- The theme was applied by an inline script that the page's own security policy had been silently blocking, so the saved choice did not take effect until the main script loaded. It is an ordinary file now and runs before first paint.
+- Dropping a second photo while the first was still decoding slipped past the in-progress guard, and both would fight over one inference engine. The guard now closes before any waiting starts, and a drop during a run says so instead of vanishing.
+- A leftover timer from a finished run could hide the progress bar of the next one mid-inference. A photo dragged in from another tab, rather than from the file system, navigated the page away, taking an un-downloaded cutout with it. Starting over kept the previous photo and cutout pinned in memory, and could lose the PNG button of the next result if an old encode failed at the wrong moment. All four are fixed.
+- A panorama could pass the megapixel cap and still be too long-sided for WebP to encode, failing at the save. The output is now also bounded to WebP's 16383-pixel side limit.
+- The page overstated a few numbers: the colour difference against a PNG is about two parts in 255, not one and a half, and the guided filter reads the photo at a working size of up to 2048 pixels, not "full detail". The copy now matches what the code does, including in the README.
+
 ## [2.4.0] - 2026-08-14
 
 ### Added
@@ -15,7 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - The cutout is saved as a WebP now, which is the difference between a file you can send in a message and one you cannot. Its transparency is bit-for-bit identical to the PNG of the same image, measured pixel by pixel, and only the colour gives anything up: about 2 parts in 255 on average, which is not something an eye finds. On the sample photo that is 72 KB instead of 402 KB.
-- A PNG button next to it, for anything that will only take a PNG. It shows both sizes so the difference is visible rather than claimed, and the PNG is only encoded if it is wanted, so nobody waits on a file they are not going to use.
+- A PNG button next to it, for anything that will only take a PNG. It shows both sizes so the difference is visible rather than claimed, and it is encoded quietly after the cutout is already on screen, so nobody waits on it.
 
 ### Fixed
 

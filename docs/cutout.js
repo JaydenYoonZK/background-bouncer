@@ -9,7 +9,7 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
   subjectBounds, blendPatch,
-} from "./cutout-core.js?v=2.4.0";
+} from "./cutout-core.js?v=2.5.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -41,6 +41,11 @@ const CPU = {
   provider: "wasm",
 };
 const MODEL_CACHE = "bouncer-model-4";
+// Set when this browser's GPU accepted the model and then failed to compile
+// or run it. Remembered across visits so the same driver is not asked to
+// fail the same way every time; the key carries the model generation, so a
+// new model gets a fresh chance.
+const NO_GPU_KEY = "bouncer-no-gpu-4";
 
 // Drop model caches from earlier versions so swapping the model file never
 // leaves the previous blob orphaned in the visitor's browser.
@@ -64,10 +69,30 @@ export function activeProvider() {
   return active ? active.provider : null;
 }
 
-// Asking for an adapter is the only honest test. A browser can expose
-// navigator.gpu and still hand back nothing on a machine with no usable GPU.
-async function hasWebGPU() {
+// Whether the GPU engine should even be offered. The 85 MB download is the
+// whole cost of that path and it is spent before anything can be checked, so
+// the decision has to be made up front, not discovered afterwards.
+//
+// A phone is the wrong place for it twice over: the download hurts most on
+// mobile data, and a phone driver that advertises WebGPU can still fall over
+// on a 1024-pixel model, which it only finds out after the fetch. A visitor
+// who switched on data saving has answered the question themselves. Both keep
+// the 40 MB CPU engine, which is the tool exactly as it worked before the
+// GPU path existed. Beyond that, asking for an adapter is the only honest
+// test: a browser can expose navigator.gpu and still hand back nothing.
+function onPhone() {
+  if (navigator.userAgentData) return navigator.userAgentData.mobile;
+  return /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
+}
+
+async function wantsGPU() {
   if (typeof navigator === "undefined" || !navigator.gpu) return false;
+  try { if (localStorage.getItem(NO_GPU_KEY)) return false; } catch { /* storage may be blocked */ }
+  // saveData is an explicit choice and the phone check is structural; the
+  // browser's connection-speed guess is neither, and in testing it called a
+  // wired desktop "3g", so it does not get a vote.
+  if (navigator.connection?.saveData) return false;
+  if (onPhone()) return false;
   try {
     return !!(await navigator.gpu.requestAdapter());
   } catch {
@@ -101,8 +126,15 @@ async function fetchModelBytes(engine, onProgress) {
     const cache = await caches.open(MODEL_CACHE);
     const hit = await cache.match(engine.url);
     if (hit) {
-      onProgress?.("download", 1);
-      return new Uint8Array(await hit.arrayBuffer());
+      const buf = await hit.arrayBuffer();
+      // A cached entry of the wrong length is a truncated download that got
+      // stored; served as-is it would fail on every visit forever. Evict it
+      // and fetch fresh instead.
+      if (buf.byteLength === engine.bytes) {
+        onProgress?.("download", 1);
+        return new Uint8Array(buf);
+      }
+      await cache.delete(engine.url);
     }
   } catch { /* private mode may block Cache API; download instead */ }
   const res = await fetch(engine.url);
@@ -116,6 +148,9 @@ async function fetchModelBytes(engine, onProgress) {
     chunks.push(value);
     got += value.length;
     onProgress?.("download", Math.min(1, got / engine.bytes));
+  }
+  if (got !== engine.bytes) {
+    throw new Error("The model arrived incomplete. Check the connection and try again.");
   }
   const bytes = new Uint8Array(got);
   let o = 0;
@@ -145,16 +180,19 @@ export function loadSession(onProgress) {
   if (onProgress) notify = onProgress;
   sessionPromise ||= (async () => {
     const sink = (s, p) => notify?.(s, p);
-    if (await hasWebGPU()) {
+    if (await wantsGPU()) {
       try {
         const ready = await start(GPU, sink);
         active = ready.engine;
         ort = ready.ort;
         return ready.session;
       } catch {
-        // A driver can advertise WebGPU and still fail to compile or run the
-        // graph. Rather than leave the visitor with a broken tool, fall back
-        // to the CPU engine, which works everywhere.
+        // A driver can advertise WebGPU and still fail to compile the graph.
+        // Fall back to the CPU engine, remember the failure so this browser
+        // is not walked into it on every visit, and release the 85 MB that
+        // will never be used here.
+        try { localStorage.setItem(NO_GPU_KEY, "1"); } catch { /* storage may be blocked */ }
+        try { (await caches.open(MODEL_CACHE)).delete(GPU.url); } catch { /* best effort */ }
       }
     }
     const ready = await start(CPU, sink);
@@ -278,12 +316,28 @@ async function refineOnSubject(source, session, S, matteModel, width, height, wo
 // Returns { blob, width, height, asPng } where blob is the transparent cutout
 // and asPng() encodes the same pixels as a PNG on demand.
 export async function removeBackground(source, { width, height }, onProgress) {
-  const session = await loadSession(onProgress);
+  let session = await loadSession(onProgress);
   // The canvas the model reads: 1024 on the GPU, 384 on the CPU.
-  const S = active.size;
+  let S = active.size;
 
   onProgress?.("model", 0);
-  const rawMatte = await runModel(session, drawToCanvas(source, S, S).ctx, S);
+  let rawMatte;
+  try {
+    rawMatte = await runModel(session, drawToCanvas(source, S, S).ctx, S);
+  } catch (e) {
+    if (active.provider !== "webgpu") throw e;
+    // The driver compiled the model and then failed to run it. Remember that,
+    // switch to the CPU engine, and finish the job rather than surfacing an
+    // error the visitor cannot do anything about.
+    try { localStorage.setItem(NO_GPU_KEY, "1"); } catch { /* storage may be blocked */ }
+    try { (await caches.open(MODEL_CACHE)).delete(GPU.url); } catch { /* best effort */ }
+    sessionPromise = null;
+    active = null;
+    ort = null;
+    session = await loadSession(onProgress);
+    S = active.size;
+    rawMatte = await runModel(session, drawToCanvas(source, S, S).ctx, S);
+  }
   onProgress?.("model", 1);
 
   onProgress?.("refine", 0);

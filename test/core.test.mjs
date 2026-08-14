@@ -161,6 +161,17 @@ test("outputSize passes normal photos through and caps huge ones under the canva
   assert.ok(sq.w * sq.h <= 16000000 && sq.w >= 1 && sq.h >= 1);
 });
 
+test("outputSize also caps the side length, or a panorama could not save as WebP", () => {
+  // 20000x700 is only 14 megapixels, under the area cap, but WebP cannot
+  // encode a side past 16383; the long side must come down and aspect hold.
+  const p = outputSize(20000, 700);
+  assert.ok(p.w <= 16383, `long side ${p.w} must fit WebP's limit`);
+  assert.ok(Math.abs(p.w / p.h - 20000 / 700) < 0.5, "aspect ratio preserved");
+  // and the same guard on a tall one
+  const t = outputSize(700, 20000);
+  assert.ok(t.h <= 16383);
+});
+
 test("defringe drops the faint ring but keeps solid and true-soft pixels", () => {
   const out = defringe(new Float32Array([0, 0.1, 0.3, 0.6, 1]), 0.2);
   assert.equal(out[0], 0);              // clear stays clear

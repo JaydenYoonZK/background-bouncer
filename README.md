@@ -14,16 +14,16 @@
 
 **[Try it now →](https://jaydenyoonzk.github.io/background-bouncer/)**
 
-Drop in a photo and a neural network lifts the subject out: hair, fur, whiskers and all. What comes back is a clean transparent PNG, ready for a new backdrop, a thumbnail, or a sticker. No uploads, no accounts, no watermarks.
+Drop in a photo and a neural network lifts the subject out: hair, fur, whiskers and all. What comes back is a clean transparent cutout, small enough to send, ready for a new backdrop, a thumbnail, or a sticker. No uploads, no accounts, no watermarks.
 
 ## ✨ What it does
 
 - 🧠 **Finds the subject with a neural network.** BiRefNet, the high-resolution segmentation model from the [Bilateral Reference](https://github.com/ZhengPeng7/BiRefNet) research, re-exported small enough for a browser to run it. It is unusually good at low-contrast edges, a pale hand on pale wood, where lighter models leave a smudge.
 - 📦 **Hands back a file you can actually send.** The cutout is saved as a WebP whose transparency is bit-for-bit identical to the PNG of the same image, at roughly a fifth to a tenth of the size. A PNG of the same pixels is one click away when something insists on one.
 - 🔍 **Looks twice when it helps.** On a GPU, once the first pass has found the subject, the model looks again at just that region, so a subject filling a third of the frame gets the whole canvas rather than a third of it. Measured on a wide frame: 13% more of the edge resolved as real partial coverage, which is what hair is.
-- 🪮 **Keeps the fine edges.** A guided filter re-cuts the mask against the full-resolution photo, so single hairs and whiskers survive at whichever canvas the model ran on.
+- 🪮 **Keeps the fine edges.** A guided filter re-cuts the mask against your photo at a working size of up to 2048 pixels, so single hairs and whiskers survive at whichever canvas the model ran on.
 - 🔍 **Before and after wipe.** Drag a handle to compare the original with the cutout, on a checkerboard or any background color you like.
-- 💾 **Transparent PNG out.** One button, full resolution, real alpha.
+- 💾 **Transparent cutout out.** One button, real alpha, up to 16 megapixels; a photo past that is scaled to fit what a browser canvas will hold.
 - 📴 **Works offline.** The model is cached after the first run; after that the whole tool works with the network cable pulled out.
 
 ## 🔒 Private by construction
@@ -38,7 +38,7 @@ The page's Content Security Policy sets `connect-src 'self'`, so the browser its
 4. A gentle S-curve snaps near-certain pixels fully solid or fully clear, leaving softness only in the genuine fringe.
 5. The alpha plane lands in the original-resolution image and a PNG is encoded.
 
-Inference runs on [ONNX Runtime Web](https://onnxruntime.ai/) (WebAssembly) inside a worker, so the page stays responsive. A photo takes several seconds on a modern laptop, a little longer on a phone.
+Inference runs on [ONNX Runtime Web](https://onnxruntime.ai/): on WebGPU where a computer's browser can reach the graphics chip, about a quarter of a second per photo, and otherwise on WebAssembly inside a worker, which keeps the page responsive and takes a few seconds.
 
 ## 🧪 Development
 
