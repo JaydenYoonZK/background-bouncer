@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.6.0] - 2026-08-14
+
+### Changed
+
+- Large photos get sharper edges on the graphics path: the pass that re-cuts the mask against the photo's real edges now works at up to 3072 pixels instead of 2048. A photo smaller than the old cap is untouched; a 4000-pixel one has its strands re-cut against half again as much real detail.
+- The finishing sweep over the output, which un-mixes the old background's colour from the edges and writes the transparency, walks the pixels once instead of twice. On a 16-megapixel photo that is a pass over 16 million pixels that no longer happens. An 8000x8000 upload measures about 2.3 seconds end to end on the graphics path.
+- When the cutout lands, the compare view now starts on the original and sweeps to the result, so you watch the background leave. Grabbing the divider mid-sweep, or preferring reduced motion, gets the resting view at once. Next to the file size the tool now also says how long the cut took and which chip did it, because a quarter of a second is worth saying out loud.
+
+### Not changed, on purpose
+
+- The edge-trim threshold stays where it was. Loosening it to chase fainter hair strands was measured and it mostly re-admits the background haze the trim exists to remove.
+- The model download stays at about 83 MB on the graphics path. Recompressing it harder saves 0.5%, which is not worth invalidating every returning visitor's cached copy.
+
 ## [2.5.0] - 2026-08-14
 
 ### Changed

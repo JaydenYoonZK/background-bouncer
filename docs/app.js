@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, loadSession } from "./cutout.js?v=2.5.0";
+import { removeBackground, loadSession, activeProvider } from "./cutout.js?v=2.6.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -13,6 +13,7 @@ const downloadBtn = $("download");
 const pngBtn = $("download-png");
 const restartBtn = $("restart");
 const resultSize = $("result-size");
+const resultStat = $("result-stat");
 const uploadBtn = $("upload");
 const sampleBtn = $("sample");
 const fileInput = $("file-input");
@@ -42,6 +43,7 @@ function pctFromClientX(clientX) {
 let dragging = false;
 compareStage.addEventListener("pointerdown", (e) => {
   dragging = true;
+  cancelSweep();
   compareStage.setPointerCapture?.(e.pointerId);
   divider.focus?.({ preventScroll: true });
   setWipe(pctFromClientX(e.clientX));
@@ -51,6 +53,7 @@ compareStage.addEventListener("pointermove", (e) => { if (dragging) setWipe(pctF
 compareStage.addEventListener("pointerup", () => { dragging = false; });
 compareStage.addEventListener("pointercancel", () => { dragging = false; });
 divider.addEventListener("keydown", (e) => {
+  cancelSweep();
   const step = e.shiftKey ? 10 : 2;
   if (e.key === "ArrowLeft" || e.key === "ArrowDown") { setWipe(wipePct - step); e.preventDefault(); }
   else if (e.key === "ArrowRight" || e.key === "ArrowUp") { setWipe(wipePct + step); e.preventDefault(); }
@@ -103,7 +106,15 @@ const STAGE_LABELS = {
   encode: () => "Stamping your hand…",
 };
 
+// The time the cut itself took, measured from the moment the model starts
+// reading the photo to the finished encode. Download and warm-up are not the
+// cut, so they are not counted; the number is the one worth telling.
+let cutStart = 0;
+let cutMs = 0;
+
 function showProgress(stage, p) {
+  if (stage === "model" && p === 0) cutStart = performance.now();
+  if (stage === "encode" && p === 1 && cutStart) cutMs = Math.round(performance.now() - cutStart);
   progress.hidden = false;
   const label = STAGE_LABELS[stage];
   if (label) progressLabel.textContent = label(p);
@@ -182,8 +193,9 @@ async function processFile(file) {
     downloadBtn.disabled = false;
     downloadBtn.textContent = "Download " + (ext === "webp" ? "WebP" : "PNG");
     resultSize.textContent = formatBytes(blob.size);
+    resultStat.textContent = cutStat();
     offerPng(result, base, seq);
-    setWipe(55);
+    revealWipe();
     resultBody.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     // Let the filled bar rest at 100% for a beat before it clears. The handle
     // is kept so the next run can cancel it instead of losing its own bar.
@@ -239,6 +251,8 @@ restartBtn.addEventListener("click", () => {
   alerts.innerHTML = "";
   downloadBtn.disabled = true;
   downloadBtn.textContent = "Download";
+  resultStat.textContent = "";
+  cutMs = 0;
   pngBtn.hidden = true;
   if (pngUrl) { URL.revokeObjectURL(pngUrl); pngUrl = null; }
   // Keep focus on the logical next action rather than dropping it to <body>.
@@ -250,6 +264,43 @@ downloadBtn.addEventListener("click", () => {
   if (!resultBlob) return;
   save(afterUrl, resultName);
 });
+
+// The line that earns the trust: how long the cut took and which chip did it.
+function cutStat() {
+  if (!cutMs) return "";
+  const t = cutMs < 950 ? cutMs + " ms" : (cutMs / 1000).toFixed(1) + " s";
+  const where = activeProvider() === "webgpu" ? "your graphics chip" : "your processor";
+  return "cut in " + t + " on " + where;
+}
+
+// The background does not just vanish, it gets walked out: the compare wipe
+// starts on the original and sweeps to the cutout when a result lands. The
+// sweep never fights a person. A hand already on the divider keeps its
+// position untouched; a grab or a key press mid-sweep cancels it and snaps to
+// the resting view, and the person's own input takes over from there. Reduced
+// motion gets the resting view with no sweep at all.
+let sweeping = false;
+function cancelSweep() {
+  if (!sweeping) return;
+  sweeping = false;
+  setWipe(55);
+}
+function revealWipe() {
+  if (dragging) return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { setWipe(55); return; }
+  const from = 100, to = 55, dur = 900;
+  const t0 = performance.now();
+  sweeping = true;
+  setWipe(from);
+  const step = (now) => {
+    if (!sweeping) return;
+    const k = Math.min(1, (now - t0) / dur);
+    setWipe(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+    else sweeping = false;
+  };
+  requestAnimationFrame(step);
+}
 
 function save(href, name) {
   const a = document.createElement("a");

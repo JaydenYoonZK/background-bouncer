@@ -265,6 +265,25 @@ export function decontaminate(rgba, matte, n, bg) {
   return rgba;
 }
 
+// decontaminate and applyAlpha in a single sweep. On a 16-megapixel output
+// they were two separate passes over 16 million pixels; one pass shaves real
+// time off exactly the photos that take longest. Same arithmetic as running
+// the two in sequence, which the tests hold it to.
+export function finishOutput(rgba, matte, n, bg) {
+  for (let i = 0; i < n; i++) {
+    const a = matte[i];
+    const j = i * 4;
+    if (a > 0.1 && a < 0.95) {
+      for (let ch = 0; ch < 3; ch++) {
+        const f = (rgba[j + ch] - (1 - a) * bg[ch]) / a;
+        rgba[j + ch] = f < 0 ? 0 : f > 255 ? 255 : f;
+      }
+    }
+    rgba[j + 3] = Math.round(a * 255);
+  }
+  return rgba;
+}
+
 // The mean color of the fully-removed background, the B in the unmix above.
 export function backgroundColor(rgba, matte, n) {
   let r = 0, g = 0, b = 0, c = 0;

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, boxBlur, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
-  removeSmallIslands, subjectBounds, blendPatch,
+  removeSmallIslands, subjectBounds, blendPatch, finishOutput,
 } from "../docs/cutout-core.js";
 
 /* ---- the reference implementations these must match ---- */
@@ -247,6 +247,20 @@ test("decontaminate unmixes the background color out of an edge pixel", () => {
   const rgba = new Uint8ClampedArray([...mixed, 255]);
   decontaminate(rgba, new Float32Array([a]), 1, B);
   assert.ok(Math.abs(rgba[0] - 0) < 2 && Math.abs(rgba[1] - 200) < 2 && Math.abs(rgba[2] - 0) < 2);
+});
+
+test("finishOutput equals decontaminate followed by applyAlpha, pixel for pixel", () => {
+  const n = 512;
+  const seed = randomPlane(n, 1, 21);
+  const matte = randomPlane(n, 1, 22);
+  const bg = [180, 40, 220];
+  const a = new Uint8ClampedArray(n * 4);
+  for (let i = 0; i < a.length; i++) a[i] = Math.floor(seed[i % seed.length] * 255);
+  const b = a.slice();
+  decontaminate(a, matte, n, bg);
+  applyAlpha(a, matte, n);
+  finishOutput(b, matte, n, bg);
+  assert.deepEqual([...b], [...a]);
 });
 
 test("applyAlpha writes only the alpha channel", () => {

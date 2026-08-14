@@ -7,9 +7,9 @@
 
 import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
-  luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
+  luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch,
-} from "./cutout-core.js?v=2.5.0";
+} from "./cutout-core.js?v=2.6.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -336,6 +336,9 @@ export async function removeBackground(source, { width, height }, onProgress) {
     ort = null;
     session = await loadSession(onProgress);
     S = active.size;
+    // Re-announce the model stage: the interlude was a download and compile,
+    // and anything timing the cut from this event must not count them.
+    onProgress?.("model", 0);
     rawMatte = await runModel(session, drawToCanvas(source, S, S).ctx, S);
   }
   onProgress?.("model", 1);
@@ -349,7 +352,11 @@ export async function removeBackground(source, { width, height }, onProgress) {
 
   // Refine at a capped working size: the matte is stretched over the photo,
   // then the guided filter re-attaches it to the photo's own edges.
-  const rs = refineSize(width, height);
+  // The GPU path affords a bigger working canvas for the edge re-cut, which
+  // is where large photos gain: a 4000-pixel photo's strands are re-cut
+  // against 3072 pixels of real detail instead of 2048. Only photos larger
+  // than the cap are affected at all.
+  const rs = refineSize(width, height, active.provider === "webgpu" ? 3072 : 2048);
   const matteWork = resizePlane(matteModel, S, S, rs.w, rs.h);
 
   // The close-up second look, where the GPU makes one affordable. It only
@@ -379,10 +386,10 @@ export async function removeBackground(source, { width, height }, onProgress) {
   const space = outputColorSpace(outCtx);
   const outImage = outCtx.getImageData(0, 0, outW, outH, { colorSpace: space });
   const n = outW * outH;
-  // Unmix the old background's color out of the edge pixels before writing
-  // alpha, so the cutout carries no colored halo onto a new background.
-  decontaminate(outImage.data, matteFull, n, backgroundColor(outImage.data, matteFull, n));
-  applyAlpha(outImage.data, matteFull, n);
+  // Unmix the old background's color out of the edge pixels in the same
+  // sweep that writes alpha, so the cutout carries no colored halo onto a
+  // new background and a 16-megapixel photo is walked once, not twice.
+  finishOutput(outImage.data, matteFull, n, backgroundColor(outImage.data, matteFull, n));
   outCtx.putImageData(outImage, 0, 0);
   // WebP is the file the visitor actually gets. It stores the alpha channel
   // exactly, so the cutout itself is untouched, and spends a little colour
