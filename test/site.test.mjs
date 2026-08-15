@@ -23,6 +23,7 @@ test("every versioned asset reference carries the package version", () => {
     }
   }
   assert.ok(index.includes(`"softwareVersion": "${v}"`), "JSON-LD softwareVersion in lockstep");
+  assert.ok(index.includes(`>v${v}</a>`), "the footer version stamp is in lockstep");
 });
 
 test("the CSP forbids talking to anything but the page itself", () => {

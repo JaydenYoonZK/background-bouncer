@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.19.1] - 2026-08-15
+
+### Added
+
+- The footer now carries the version, linked to this changelog. The tool works offline from a cached copy, which means the page in front of you can be one release behind the one just shipped; a visible version number settles in one glance which one you are holding. The footer also now credits libwebp and jSquash for the shipped WebP encoder.
+
 ## [2.19.0] - 2026-08-15
 
 ### Fixed

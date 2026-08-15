@@ -10,7 +10,7 @@ import {
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
   subjectPresence, encodePng, pngColorChunks, buildPalette, refinePalette, makeDitherState, ditherRows,
-} from "./cutout-core.js?v=2.19.0";
+} from "./cutout-core.js?v=2.19.1";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
