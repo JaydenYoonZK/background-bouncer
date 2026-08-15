@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.20.8";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.20.9";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");

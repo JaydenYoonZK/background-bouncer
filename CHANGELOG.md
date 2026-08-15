@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.20.9] - 2026-08-16
+
+### Fixed
+
+- The not-found page now carries the same viewport declaration as the front page; it had been skipped when the safe-area work landed.
+
 ## [2.20.8] - 2026-08-16
 
 ### Fixed
