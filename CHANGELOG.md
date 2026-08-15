@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.19.0] - 2026-08-15
+
+### Fixed
+
+- An iPhone's download is now smaller than the photo it came from. The palette PNG of the last two releases was the best a browser without a WebP encoder could be handed, and at 1.7 MB for a 1.5 MB HEIC it was still larger than the input, which is not what compression means. So the tool now brings its own encoder: libwebp, the same encoder desktop browsers use internally, compiled to WebAssembly at 0.3 MB, fetched once on first use and cached like the rest of the runtime. A browser whose canvas cannot make WebP files, iPhone Safari above all, now produces the same WebP a desktop does: the complaint's own 4032 by 2268 photo comes back at 416 KB, less than a third of its 1.5 MB original, where the last release gave 1.7 MB and the one before that 4.7. The SIMD build is tried first and the plain build catches older engines; if the encoder cannot load at all, the palette PNG remains, and the lossless PNG behind it.
+
 ## [2.18.0] - 2026-08-15
 
 ### Changed

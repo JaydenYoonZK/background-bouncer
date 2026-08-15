@@ -10,7 +10,7 @@ import {
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
   subjectPresence, encodePng, pngColorChunks, buildPalette, refinePalette, makeDitherState, ditherRows,
-} from "./cutout-core.js?v=2.18.0";
+} from "./cutout-core.js?v=2.19.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -521,13 +521,52 @@ export async function removeBackground(source, { width, height }, onProgress) {
   // well-known PNG shrinking services make. Transparency survives both.
   let blob = await encode(outCanvas, "image/webp", WEBP_QUALITY);
   let compressed = blob.type === "image/webp" ? "webp" : null;
-  // Test switch: behave exactly like a browser with no WebP encoder, so the
-  // palette path can be exercised on one that has it.
-  let png8Test = false;
-  try { png8Test = !!localStorage.getItem("bouncer-png8"); } catch { /* storage may be blocked */ }
+  // Test switches: "bouncer-png8" behaves exactly like a browser with no
+  // WebP encoder in its canvas; "bouncer-nowasm" additionally refuses the
+  // shipped encoder, so the palette fallback can be exercised too.
+  let png8Test = false, noWasmTest = false;
+  try {
+    png8Test = !!localStorage.getItem("bouncer-png8");
+    noWasmTest = !!localStorage.getItem("bouncer-nowasm");
+  } catch { /* storage may be blocked */ }
   if (png8Test && compressed) {
     blob = await encode(outCanvas, "image/png");
     compressed = null;
+  }
+  if (!compressed && !noWasmTest) {
+    // The canvas cannot make a WebP here, Safari above all, so the tool
+    // brings its own encoder: libwebp compiled to WebAssembly, 0.3 MB
+    // fetched once and cached, and an iPhone's download becomes the same
+    // WebP a desktop gets instead of a many-times-larger PNG. The pixels
+    // are read back in sRGB, which is what an untagged WebP is taken to be.
+    try {
+      let srgb;
+      try { srgb = outCtx.getImageData(0, 0, outW, outH, { colorSpace: "srgb" }); }
+      catch { srgb = outCtx.getImageData(0, 0, outW, outH); }
+      const factory = async (name) => (await import(`./vendor/${name}`)).default;
+      let enc;
+      try { enc = await (await factory("webp_enc_simd.mjs"))(); }
+      catch { enc = await (await factory("webp_enc.mjs"))(); }
+      const buf = enc.encode(srgb.data, outW, outH, {
+        // libwebp's WebPConfig defaults, with the tool's own quality.
+        quality: Math.round(WEBP_QUALITY * 100),
+        target_size: 0, target_PSNR: 0, method: 4, sns_strength: 50,
+        filter_strength: 60, filter_sharpness: 0, filter_type: 1,
+        partitions: 0, segments: 4, pass: 1, show_compressed: 0,
+        preprocessing: 0, autofilter: 0, partition_limit: 0,
+        alpha_compression: 1, alpha_filtering: 1, alpha_quality: 100,
+        lossless: 0, exact: 0, image_hint: 0, emulate_jpeg_size: 0,
+        thread_level: 0, low_memory: 0, near_lossless: 100,
+        use_delta_palette: 0, use_sharp_yuv: 0,
+      });
+      if (buf) {
+        const wasmWebp = new Blob([buf], { type: "image/webp" });
+        if (wasmWebp.size < blob.size * 0.8) {
+          blob = wasmWebp;
+          compressed = "webp";
+        }
+      }
+    } catch { /* the palette PNG below still compresses */ }
   }
   if (!compressed) {
     try {

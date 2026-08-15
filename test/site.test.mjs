@@ -146,6 +146,15 @@ test("saved files carry the JaydenART Background Bouncer name", () => {
   assert.ok(!app.includes('"-cutout'), "the old -cutout suffix is gone");
 });
 
+test("the tool ships its own WebP encoder for browsers without one", () => {
+  for (const f of ["webp_enc.mjs", "webp_enc.wasm", "webp_enc_simd.mjs", "webp_enc_simd.wasm"]) {
+    assert.ok(existsSync(join(root, "docs/vendor", f)), `${f} is vendored`);
+  }
+  assert.match(cutout, /webp_enc_simd\.mjs/, "the SIMD build is tried first");
+  assert.match(cutout, /webp_enc\.mjs/, "the plain build catches older engines");
+  assert.match(cutout, /colorSpace: "srgb"/, "the encoder is fed sRGB pixels");
+});
+
 test("browsers without a WebP encoder get a compressed palette PNG", () => {
   assert.match(cutout, /buildPalette\(/, "the palette is chosen for the photo");
   assert.match(cutout, /ditherRows\(/, "the rounding hides in dithering");

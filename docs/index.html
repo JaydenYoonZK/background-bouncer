@@ -23,15 +23,15 @@
   <meta name="twitter:title" content="Background Bouncer: photo backgrounds gone, privately">
   <meta name="twitter:description" content="A transparent cutout from any photo, made entirely in your browser. Nothing is uploaded, ever.">
   <meta name="twitter:image" content="https://jaydenyoonzk.github.io/background-bouncer/assets/social-preview.png">
-  <script src="theme-boot.js?v=2.18.0"></script>
-  <link rel="stylesheet" href="styles.css?v=2.18.0">
+  <script src="theme-boot.js?v=2.19.0"></script>
+  <link rel="stylesheet" href="styles.css?v=2.19.0">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Background Bouncer",
     "applicationCategory": "MultimediaApplication",
-    "softwareVersion": "2.18.0",
+    "softwareVersion": "2.19.0",
     "operatingSystem": "Any (browser-based)",
     "url": "https://jaydenyoonzk.github.io/background-bouncer/",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -236,7 +236,7 @@
   <p>A photo does not say which pixels are the subject, so the tool asks a neural network. BiRefNet, the high-resolution segmentation model from Zheng Peng and colleagues' <a href="https://github.com/ZhengPeng7/BiRefNet" target="_blank" rel="noopener">Bilateral Reference</a> research, studies the whole picture and paints a probability map: this pixel is the dog, this pixel is the floor. It is unusually good at the hard cases, a pale hand against pale wood or a single strand against a bright sky, where a lighter model gives up and leaves a smudge.</p>
   <p>The map is sharp, but the model reads your photo on a square working canvas, so its edges are only as fine as that canvas allows. A second pass fixes this: a guided filter reads the actual edges of your photo, at a working size of up to 2048 pixels, and re-attaches the mask to them, which is how single hairs and whiskers make it into the cutout. A final curve snaps the sure areas fully solid or fully clear, leaving softness only where the photo itself is soft.</p>
   <p>Everything runs on ONNX Runtime, inside your browser. If the browser can reach your graphics chip, the model runs there at full resolution, reads the photo twice for a steadier edge, and finishes in about a second. If it cannot, the same work happens on the processor in a worker, which keeps the page responsive and takes a few seconds. Either way your photo is being studied on your own machine, not on a server farm.</p>
-  <p>What comes back is a WebP that keeps its transparency exactly and throws away only a trace of colour the eye cannot locate: on the sample photo the average pixel differs from the PNG by between two and three parts in 255, and the file is 56 KB where the PNG is 336; a 16-megapixel photo comes back at a third of a megabyte where its PNG is four. That is the difference between a cutout you can send in a message and one you cannot. On a browser that cannot make WebP files, iPhone Safari above all, the compressed download is a palette PNG instead: up to 256 colours chosen for this photo, the rounding hidden in dithering, the same trade the well-known PNG shrinking services make. If something you use insists on a PNG, the same pixels are one click away.</p>
+  <p>What comes back is a WebP that keeps its transparency exactly and throws away only a trace of colour the eye cannot locate: on the sample photo the average pixel differs from the PNG by between two and three parts in 255, and the file is 56 KB where the PNG is 336; a 16-megapixel photo comes back at a third of a megabyte where its PNG is four. That is the difference between a cutout you can send in a message and one you cannot. On a browser that cannot make WebP files, iPhone Safari above all, the tool brings its own encoder: a 0.3 MB WebAssembly build of the same libwebp that desktop browsers use, fetched once and cached, so the download is the same small WebP everywhere. If even that is unavailable, the fallback is a palette PNG: up to 256 colours chosen for this photo, the rounding hidden in dithering. If something you use insists on a PNG, the same pixels are one click away.</p>
 
   <h2 class="section-title" id="private"><span aria-hidden="true">🔒</span> Private by construction</h2>
   <p>Background removal sites usually mean uploading your photo to someone's server. This one cannot upload anything: the page's Content Security Policy sets <code>connect-src 'self'</code>, so the browser itself refuses any request except fetching the page's own files. Family photos, ID pictures, unreleased product shots: they all stay in your RAM and nowhere else.</p>
@@ -297,6 +297,6 @@
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
 </button>
 
-<script type="module" src="app.js?v=2.18.0"></script>
+<script type="module" src="app.js?v=2.19.0"></script>
 </body>
 </html>
