@@ -226,6 +226,14 @@ button.primary:active {
 
 .charcount { color: var(--ink-mute); font-size: 0.85rem; }
 .dl-note { margin: 10px 0 0; color: var(--ink-mute); font-size: 0.85rem; max-width: 62ch; }
+/* ---- Footer credits ----
+   The projects this tool stands on, as quiet outlined chips: name, licence
+   tag, link. A row that reads at a glance instead of a run-on sentence. */
+.credits { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 14px 0 4px; }
+.credits-label { color: var(--ink-mute); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-right: 2px; }
+.credit-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-mute); font-size: 0.8rem; text-decoration: none; transition: color 0.15s, border-color 0.15s; }
+a.credit-chip:hover { color: var(--accent); border-color: var(--accent); }
+.credit-tag { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
 
 /* Stats */
 .stats {

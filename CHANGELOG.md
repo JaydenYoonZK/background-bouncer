@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.20.4] - 2026-08-15
+
+### Changed
+
+- The credits are chips now. The projects this tool stands on, BiRefNet, ONNX Runtime Web, and libwebp via jSquash, each get a small outlined chip in the footer with their licence beside them and a link home, in place of the run-on sentence that held them before. The sample photo credit sits with them.
+
 ## [2.20.3] - 2026-08-15
 
 ### Changed

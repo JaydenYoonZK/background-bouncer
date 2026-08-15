@@ -4,7 +4,7 @@
    requests pass through untouched. The cache name carries the release version
    and old caches are dropped on activate. */
 
-const VERSION = "?v=2.20.3";
+const VERSION = "?v=2.20.4";
 const CACHE = "background-bouncer-" + VERSION;
 // The ONNX runtime lives in its own cache, filled as it is used and never
 // dropped on a version bump: precaching it would force every visitor to
