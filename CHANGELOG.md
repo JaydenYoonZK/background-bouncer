@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.20.5] - 2026-08-15
+
+### Changed
+
+- The legal line matches the rest of the suite now: a separator above it, the copyright standing alone on its own line at the suite's own size, and the version on its own line beneath, where it cannot wrap awkwardly against the copyright on a narrow screen.
+
 ## [2.20.4] - 2026-08-15
 
 ### Changed

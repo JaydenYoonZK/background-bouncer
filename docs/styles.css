@@ -234,6 +234,11 @@ button.primary:active {
 .credit-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-mute); font-size: 0.8rem; text-decoration: none; transition: color 0.15s, border-color 0.15s; }
 a.credit-chip:hover { color: var(--accent); border-color: var(--accent); }
 .credit-tag { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+/* The legal block, identical across the suite: a separator, the copyright
+   as one standalone line, the version on its own line beneath it. */
+footer .legal { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 0.8rem; letter-spacing: 0.02em; opacity: 0.85; }
+footer .legal p { margin: 0; }
+footer .legal .legal-version { margin-top: 4px; }
 
 /* Stats */
 .stats {
