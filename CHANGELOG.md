@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.20.2] - 2026-08-15
+
+### Fixed
+
+- Pinch-zooming a result on a phone could still take the tab down, and the memory ledger said why: everything shipped since the last memory pass had quietly grown on the phone's side of the scale. The WebP encoder was built fresh for every cut, leaving each previous instance's whole heap waiting on the collector; it is built once now and kept. The result held a full-resolution pixel copy in reserve for the PNG; the pixels are read back from the canvas only when a PNG is actually asked for. The lossless PNG itself was encoded eagerly after every cut just to print its size on the button; on a phone it now waits until the button is tapped, because the encode's working memory is exactly what a pinch-zoomed tab cannot spare. And half a minute after a cut, a phone lets the inference engine's heap go entirely, the single biggest thing still standing; the model bytes stay cached, so the next photo pays a short compile, not a download.
+
 ## [2.20.1] - 2026-08-15
 
 ### Fixed

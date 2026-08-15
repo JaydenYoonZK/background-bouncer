@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.20.1";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.20.2";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -385,6 +385,7 @@ function showIncoming() {
   if (afterUrl) { URL.revokeObjectURL(afterUrl); afterUrl = null; }
   if (afterPreviewUrl) { URL.revokeObjectURL(afterPreviewUrl); afterPreviewUrl = null; }
   if (pngUrl) { URL.revokeObjectURL(pngUrl); pngUrl = null; }
+  phonePngResult = null;
   pngBtn.hidden = true;
   downloadBtn.disabled = true;
   downloadBtn.textContent = "Download";
@@ -468,6 +469,7 @@ restartBtn.addEventListener("click", () => {
   if (beforeUrl) { URL.revokeObjectURL(beforeUrl); beforeUrl = null; }
   if (afterUrl) { URL.revokeObjectURL(afterUrl); afterUrl = null; }
   if (afterPreviewUrl) { URL.revokeObjectURL(afterPreviewUrl); afterPreviewUrl = null; }
+  phonePngResult = null;
   resultBody.hidden = true;
   results.hidden = true;
   alerts.innerHTML = "";
@@ -545,6 +547,16 @@ async function offerPng(result, base, seq) {
   // second identical offer would be noise.
   if (!result.compressed) { pngBtn.hidden = true; return; }
   pngBtn.hidden = false;
+  // On a phone the lossless PNG is not encoded until it is asked for: the
+  // encode's working memory is exactly what a pinch-zoomed tab cannot
+  // spare, and most phone visitors never tap the button at all. The label
+  // says what it is; the size appears once it exists.
+  if (onPhone()) {
+    pngBtn.disabled = false;
+    pngBtn.textContent = "Lossless PNG";
+    phonePngResult = { result, base, seq };
+    return;
+  }
   pngBtn.disabled = true;
   pngBtn.textContent = "PNG…";
   try {
@@ -571,8 +583,25 @@ async function offerPng(result, base, seq) {
   }
 }
 
-pngBtn.addEventListener("click", () => {
-  if (pngUrl) save(pngUrl, pngName);
+let phonePngResult = null;
+pngBtn.addEventListener("click", async () => {
+  if (pngUrl) { save(pngUrl, pngName); return; }
+  // Phone path: the PNG is made now, on request.
+  if (!phonePngResult || phonePngResult.seq !== runSeq) return;
+  const { result, base, seq } = phonePngResult;
+  pngBtn.disabled = true;
+  pngBtn.textContent = "PNG…";
+  try {
+    const png = await result.asPng();
+    if (seq !== runSeq) return;
+    pngUrl = URL.createObjectURL(png);
+    pngName = (base ? base + "_" : "") + "JaydenART_Background_Bouncer.png";
+    pngBtn.disabled = false;
+    pngBtn.textContent = "Lossless PNG · " + formatBytes(png.size);
+    save(pngUrl, pngName);
+  } catch {
+    if (seq === runSeq) { pngBtn.disabled = false; pngBtn.textContent = "Lossless PNG"; }
+  }
 });
 
 // Drop a photo anywhere on the page: the tool card lights up as the drop zone

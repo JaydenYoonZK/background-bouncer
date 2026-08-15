@@ -11,7 +11,7 @@ import {
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
   subjectPresence, encodePng, pngColorChunks, buildPalette, refinePalette, makeDitherState, ditherRows,
   blobRescue,
-} from "./cutout-core.js?v=2.20.1";
+} from "./cutout-core.js?v=2.20.2";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -58,6 +58,18 @@ if (typeof caches !== "undefined") {
 }
 
 let sessionPromise = null;
+// The shipped WebP encoder, built once and kept: a fresh Emscripten
+// instance per cut left the previous one's whole heap waiting on the
+// collector, and on a phone those corpses stack up against the tab's
+// memory ceiling faster than they are buried.
+let wasmWebpPromise = null;
+function loadWasmWebp() {
+  return (wasmWebpPromise ||= (async () => {
+    const factory = async (name) => (await import(`./vendor/${name}`)).default;
+    try { return await (await factory("webp_enc_simd.mjs"))(); }
+    catch { return await (await factory("webp_enc.mjs"))(); }
+  })().catch((e) => { wasmWebpPromise = null; throw e; }));
+}
 // The engine that won, and the runtime it came from: removeBackground reads
 // both to size its input and build its tensor.
 let active = null;
@@ -214,6 +226,9 @@ async function start(engine, notifyFn) {
 }
 
 export function loadSession(onProgress) {
+  // A run beginning reclaims the session from the idle-release timer; the
+  // release must never land while a cut is using what it releases.
+  clearTimeout(idleReleaseTimer);
   if (onProgress) notify = onProgress;
   sessionPromise ||= (async () => {
     const sink = (s, p) => notify?.(s, p);
@@ -548,10 +563,7 @@ export async function removeBackground(source, { width, height }, onProgress) {
       let srgb;
       try { srgb = outCtx.getImageData(0, 0, outW, outH, { colorSpace: "srgb" }); }
       catch { srgb = outCtx.getImageData(0, 0, outW, outH); }
-      const factory = async (name) => (await import(`./vendor/${name}`)).default;
-      let enc;
-      try { enc = await (await factory("webp_enc_simd.mjs"))(); }
-      catch { enc = await (await factory("webp_enc.mjs"))(); }
+      const enc = await loadWasmWebp();
       const buf = enc.encode(srgb.data, outW, outH, {
         // libwebp's WebPConfig defaults, with the tool's own quality.
         quality: Math.round(WEBP_QUALITY * 100),
@@ -611,21 +623,44 @@ export async function removeBackground(source, { width, height }, onProgress) {
   // here with per-row adaptive filtering, which measures 12 to 17% smaller
   // than the canvas encoder's output for the same lossless pixels. Anything
   // failing falls back to the canvas encoder.
-  let pngPixels = outImage;
   let pending = null;
   const asPng = () => (pending ||= (async () => {
     try {
-      const bytes = await encodePng(pngPixels.data, outW, outH, {
+      // Read the pixels back only when the PNG is actually wanted: holding
+      // a full-resolution copy in the meantime is memory a phone cannot
+      // spare while its owner pinch-zooms the result. The canvas already
+      // stores hidden pixels premultiplied to black, so nothing to clear.
+      let px;
+      try { px = outCtx.getImageData(0, 0, outW, outH, { colorSpace: space }); }
+      catch { px = outCtx.getImageData(0, 0, outW, outH); }
+      const bytes = await encodePng(px.data, outW, outH, {
         colorChunks: await harvestColorChunks(),
         yieldEvery: 64,
       });
       return new Blob([bytes], { type: "image/png" });
     } catch {
       return encode(outCanvas, "image/png");
-    } finally {
-      pngPixels = null;
     }
   })());
   onProgress?.("encode", 1);
+  // A phone's memory ceiling is the whole game there: once the result is
+  // out the inference session's heap is the biggest thing still standing,
+  // and a pinch-zoom re-raster on top of it can take the tab down. Let it
+  // go after a quiet half minute; the model bytes stay cached, so the next
+  // photo pays a short compile, not a download.
+  if (onPhone()) {
+    clearTimeout(idleReleaseTimer);
+    idleReleaseTimer = setTimeout(releaseSessionIdle, 30000);
+  }
   return { blob, width: outW, height: outH, asPng, compressed };
+}
+
+let idleReleaseTimer = 0;
+async function releaseSessionIdle() {
+  const p = sessionPromise;
+  if (!p) return;
+  sessionPromise = null;
+  active = null;
+  ort = null;
+  try { (await p).release?.(); } catch { /* the worker dies with its session */ }
 }
