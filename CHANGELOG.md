@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.20.10] - 2026-08-16
+
+### Fixed
+
+- The film grain layer was pinned to the screen, and a full-bleed pinned layer is what pushes iOS Safari to draw scrolled page content up into the status bar around the clock. The grain is now anchored to the page and scrolls with it, so that strip stays clean, and the texture itself looks exactly as before.
+
 ## [2.20.9] - 2026-08-16
 
 ### Fixed
