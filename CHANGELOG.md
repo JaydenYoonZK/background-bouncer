@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.20.3] - 2026-08-15
+
+### Changed
+
+- The footer now ends the way every project in the suite ends: the copyright line, with the version beside it linked to this changelog. The version moves out of the credits, where it was crowding the acknowledgements, onto the line where a version belongs.
+
 ## [2.20.2] - 2026-08-15
 
 ### Fixed
