@@ -6,7 +6,7 @@ import {
   removeSmallIslands, subjectBounds, blendPatch, finishOutput, colorRescue, dropOrphanSoft,
   resizePlaneF, localBackgroundMap, subjectPresence,
   crc32, pngChunk, pngColorChunks, pngFilterInto, encodePng,
-  buildPalette, refinePalette, makeDitherState, ditherRows,
+  buildPalette, refinePalette, makeDitherState, ditherRows, blobRescue,
 } from "../docs/cutout-core.js";
 import zlib from "node:zlib";
 
@@ -507,6 +507,35 @@ test("indexed encodePng roundtrips indices and palette exactly", async () => {
     }
   }
   assert.deepEqual([...out], [...idx], "decoded indices match exactly");
+});
+
+test("blobRescue removes a wedged background chunk, keeps accessories and bulk", () => {
+  const w = 240, h = 120, n = w * h;
+  const rgba = new Uint8ClampedArray(n * 4);
+  const matte = new Float32Array(n);
+  const put = (x, y, c, a) => {
+    const i = (y * w + x) * 4;
+    rgba[i] = c[0]; rgba[i + 1] = c[1]; rgba[i + 2] = c[2]; rgba[i + 3] = 255;
+    matte[y * w + x] = a;
+  };
+  const NAVY = [30, 40, 90], RED = [230, 60, 60], GREY = [120, 120, 120];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (x < 100) put(x, y, NAVY, 1);            // the subject: kept, huge
+    else if (x < 170) put(x, y, RED, 0);        // red background, removed
+    else put(x, y, GREY, 0);                    // grey background, removed
+  }
+  // a red chunk the model kept, wedged on the subject's edge, red like the
+  // background right next to it: must come out
+  for (let y = 40; y < 60; y++) for (let x = 100; x < 118; x++) put(x, y, RED, 1);
+  // a red accessory on the subject's edge where the adjacent background is
+  // GREY: red matches neither grey background nor navy subject, so the
+  // clear-evidence rule must leave it alone
+  for (let y = 40; y < 60; y++) for (let x = 82; x < 100; x++) put(x + 88, y + 45, RED, 0); // keep coords simple below
+  for (let y = 95; y < 112; y++) for (let x = 170; x < 184; x++) put(x, y, RED, 1);
+  const out = blobRescue(rgba, matte, w, h);
+  assert.equal(out[50 * w + 108], 0, "the wedged background-coloured chunk is removed");
+  assert.equal(out[100 * w + 176], 1, "the accessory unlike its own local background stays");
+  assert.equal(out[50 * w + 50], 1, "the subject's bulk is never touched");
 });
 
 test("subjectPresence reads how much of the frame the matte keeps", () => {

@@ -430,6 +430,89 @@ export function ditherRows(rgba, w, yStart, yEnd, indices, st) {
   }
 }
 
+// Kept background does not always come as a fleck the island pass can see,
+// or as boundary pixels the colour rescue can question one at a time: it
+// can be a solid chunk wedged between two subjects, touching both. Judged
+// pixel by pixel the evidence is thin; judged as one region it is plain.
+// The kept mass is segmented into colour-coherent blobs, and a small blob
+// near the boundary whose whole colour plainly matches the background right
+// next to it, while plainly not matching the confident subject around it,
+// comes out as one piece. Evidence only ever lowers alpha; a blob that
+// resembles the subject at all is left alone, and a blob bigger than a
+// twentieth of the kept area is never touched, so a jacket is not a blob.
+export function blobRescue(rgba, matte, w, h) {
+  const n = w * h;
+  const hard = new Uint8Array(n);
+  let kept = 0;
+  for (let i = 0; i < n; i++) if (matte[i] >= 0.5) { hard[i] = 1; kept++; }
+  if (!kept) return matte;
+  // near-boundary: a kept pixel with clear background within reach
+  const hardF = new Float32Array(n);
+  for (let i = 0; i < n; i++) hardF[i] = hard[i];
+  const nearEdge = boxBlur(hardF, w, h, 8);
+  // colour-coherent region growing over the kept mass
+  const label = new Int32Array(n).fill(-1);
+  const stack = new Int32Array(n);
+  const blobs = [];
+  const TOL = 42;
+  for (let s = 0; s < n; s++) {
+    if (!hard[s] || label[s] !== -1) continue;
+    const id = blobs.length;
+    let sp = 0, size = 0, sr = 0, sg = 0, sb = 0, touches = false;
+    let bx0 = w, by0 = h, bx1 = -1, by1 = -1;
+    stack[sp++] = s; label[s] = id;
+    while (sp > 0) {
+      const p = stack[--sp];
+      size++;
+      const pr = rgba[p * 4], pg = rgba[p * 4 + 1], pb = rgba[p * 4 + 2];
+      sr += pr; sg += pg; sb += pb;
+      if (nearEdge[p] < 0.98) touches = true;
+      const py = (p / w) | 0, px = p - py * w;
+      if (px < bx0) bx0 = px; if (px > bx1) bx1 = px;
+      if (py < by0) by0 = py; if (py > by1) by1 = py;
+      const mr = sr / size, mg = sg / size, mb = sb / size;
+      const y = (p / w) | 0, x = p - y * w;
+      for (const q of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, y > 0 ? p - w : -1, y < h - 1 ? p + w : -1]) {
+        if (q < 0 || !hard[q] || label[q] !== -1) continue;
+        const d = Math.abs(rgba[q * 4] - mr) + Math.abs(rgba[q * 4 + 1] - mg) + Math.abs(rgba[q * 4 + 2] - mb);
+        if (d > TOL * 3) continue;
+        label[q] = id;
+        stack[sp++] = q;
+      }
+    }
+    blobs.push({ size, r: sr / size, g: sg / size, b: sb / size, touches, kill: false, x0: bx0, y0: by0, x1: bx1, y1: by1 });
+  }
+  // judge each small boundary blob against its immediate surroundings
+  const maxBlob = kept * 0.05;
+  const REACH = 48;
+  let any = false;
+  for (let id = 0; id < blobs.length; id++) {
+    const bl = blobs[id];
+    if (!bl.touches || bl.size > maxBlob || bl.size < 12) continue;
+    const x0 = Math.max(0, bl.x0 - REACH), y0 = Math.max(0, bl.y0 - REACH);
+    const x1 = Math.min(w - 1, bl.x1 + REACH), y1 = Math.min(h - 1, bl.y1 + REACH);
+    let br = 0, bg = 0, bb = 0, bc = 0, fr = 0, fg = 0, fb = 0, fc = 0;
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const p = y * w + x;
+        if (matte[p] < 0.05) { br += rgba[p * 4]; bg += rgba[p * 4 + 1]; bb += rgba[p * 4 + 2]; bc++; }
+        else if (matte[p] > 0.95 && label[p] !== id) { fr += rgba[p * 4]; fg += rgba[p * 4 + 1]; fb += rgba[p * 4 + 2]; fc++; }
+      }
+    }
+    if (bc < 64 || fc < 64) continue;
+    const dB = (Math.abs(bl.r - br / bc) + Math.abs(bl.g - bg / bc) + Math.abs(bl.b - bb / bc)) / 3;
+    const dF = (Math.abs(bl.r - fr / fc) + Math.abs(bl.g - fg / fc) + Math.abs(bl.b - fb / fc)) / 3;
+    // plainly the background's colour, plainly not the subject's
+    if (dB < 26 && dF > 2.5 * dB && dF > 40) { bl.kill = true; any = true; }
+  }
+  if (!any) return matte;
+  const out = new Float32Array(matte);
+  for (let p = 0; p < n; p++) {
+    if (label[p] >= 0 && blobs[label[p]].kill) out[p] = 0;
+  }
+  return out;
+}
+
 // How much of the frame the matte actually keeps. The engine reads this to
 // tell an empty or indiscriminate matte, a photo with no clear subject in
 // it, from a real cut.

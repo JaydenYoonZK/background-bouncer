@@ -10,7 +10,8 @@ import {
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
   subjectPresence, encodePng, pngColorChunks, buildPalette, refinePalette, makeDitherState, ditherRows,
-} from "./cutout-core.js?v=2.19.1";
+  blobRescue,
+} from "./cutout-core.js?v=2.20.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -443,10 +444,14 @@ export async function removeBackground(source, { width, height }, onProgress) {
   // A last sweep on the finished matte: refinement can leave flecks that the
   // early island pass, which ran on the raw model output, never saw. Every
   // floating solid speck goes, then every soft wisp attached to nothing.
-  const crisp = dropOrphanSoft(
+  let crisp = dropOrphanSoft(
     removeSmallIslands(defringe(crispen(rescued, 0.35), 0.22), rs.w, rs.h),
     rs.w, rs.h
   );
+  // A last look at whole regions: a chunk of background wedged between two
+  // subjects is invisible to the island pass (it is attached) and too big a
+  // claim for per-pixel colour evidence; judged as one blob it is plain.
+  crisp = blobRescue(workRgba, crisp, rs.w, rs.h);
   // A photo with no clear subject gets an honest answer, not an empty file.
   // Under 0.2% of the frame kept means the model found nothing it believed
   // in; over 99.5% means it could not tell a subject from the background and

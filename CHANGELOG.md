@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.20.0] - 2026-08-15
+
+### Changed
+
+- A last look at whole regions before the cutout ships. Kept background does not always come as a floating fleck the island pass can drop, or as boundary pixels the colour evidence can question one at a time: it can be a solid chunk wedged between two subjects, touching both, like a piece of lit wall between two people in a selfie. Judged pixel by pixel the evidence is thin; judged as one region it is plain. The kept mass is now segmented into colour-coherent blobs, and a small blob near the boundary whose whole colour plainly matches the background right next to it, while plainly not matching the confident subject around it, comes out in one piece. Verified on the photo that showed the problem: the wedged chunks between the two subjects come out on both engines, while a red hair clip against pink neon, a jacket's red trim, and every hand and strand in the older test photos stay exactly where they were. A blob bigger than a twentieth of the kept area is never touched, so a jacket can never be mistaken for a crumb.
+
 ## [2.19.1] - 2026-08-15
 
 ### Added
