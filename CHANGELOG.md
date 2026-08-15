@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.18.0] - 2026-08-15
+
+### Changed
+
+- The palette PNG compresses harder and lands truer at once. The 256 colours from the median cut now get three Lloyd rounds, reassigning the photo's pixels and re-centering each colour on what actually chose it, and the dithering backs off to half strength because the better-fitted palette needs less noise to hide its rounding. Measured on the same iPhone photo as the last release: 1.70 MB where 2.17.0 gave 1.81, with the average colour error down from 2.5 to 2.2 parts in 255. Each change alone measured worse, the refined palette without the gentler dither was larger, not smaller; the pair is the point.
+- The close-up second look now gets the same mirrored double-read the whole-frame pass got in 2.16.0: when a small subject earns the zoom, the model reads that crop straight and mirrored and the two mattes are averaged, steadying the exact edges the zoom exists to sharpen. Graphics path only, about a quarter second, and only on photos where the zoom runs at all.
+
 ## [2.17.0] - 2026-08-15
 
 ### Fixed

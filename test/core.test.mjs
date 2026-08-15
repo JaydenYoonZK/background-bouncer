@@ -6,7 +6,7 @@ import {
   removeSmallIslands, subjectBounds, blendPatch, finishOutput, colorRescue, dropOrphanSoft,
   resizePlaneF, localBackgroundMap, subjectPresence,
   crc32, pngChunk, pngColorChunks, pngFilterInto, encodePng,
-  buildPalette, makeDitherState, ditherRows,
+  buildPalette, refinePalette, makeDitherState, ditherRows,
 } from "../docs/cutout-core.js";
 import zlib from "node:zlib";
 
@@ -408,6 +408,32 @@ test("buildPalette finds the colours a picture is actually made of", () => {
     }
     assert.ok(best <= 8, `palette reaches ${c}, off by ${best}`);
   }
+});
+
+test("refinePalette moves the palette closer to the picture, never further", () => {
+  const w = 48, h = 32, n = w * h;
+  const rgba = new Uint8ClampedArray(n * 4);
+  let s = 21;
+  for (let i = 0; i < rgba.length; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; rgba[i] = s & 255; }
+  const err = (pal) => {
+    let e = 0;
+    for (let i = 0; i < n; i++) {
+      let bd = Infinity;
+      for (let p = 0; p < pal.length / 4; p++) {
+        const dr = rgba[i*4]-pal[p*4], dg = rgba[i*4+1]-pal[p*4+1], db = rgba[i*4+2]-pal[p*4+2], da = rgba[i*4+3]-pal[p*4+3];
+        const d = dr*dr + dg*dg + db*db + 2*da*da;
+        if (d < bd) bd = d;
+      }
+      e += bd;
+    }
+    return e / n;
+  };
+  const pal = buildPalette(rgba, n, 32);
+  const before = err(pal);
+  const refined = refinePalette(rgba, n, new Uint8Array(pal), 3);
+  const after = err(refined);
+  assert.ok(after <= before + 1e-6, `refinement does not regress: ${after.toFixed(1)} vs ${before.toFixed(1)}`);
+  assert.equal(refined.length, pal.length, "palette size unchanged");
 });
 
 test("ditherRows stays honest: valid indices, small mean error, flat stays flat", () => {

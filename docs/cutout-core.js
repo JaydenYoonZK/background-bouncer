@@ -349,6 +349,38 @@ export function buildPalette(rgba, n, max = 256, sampleStep = 1) {
   return palette;
 }
 
+// Lloyd refinement: reassign the samples to their nearest palette entry and
+// move each entry to the mean of what chose it. A few rounds settle the
+// median-cut palette noticeably closer to the photo, which shows up as less
+// dither noise, and less noise deflates smaller.
+export function refinePalette(rgba, n, palette, iterations = 3, sampleStep = 1) {
+  const count = palette.length / 4;
+  for (let it = 0; it < iterations; it++) {
+    const acc = new Float64Array(count * 5);
+    for (let i = 0; i < n; i += sampleStep) {
+      const r = rgba[i * 4], g = rgba[i * 4 + 1], b = rgba[i * 4 + 2], a = rgba[i * 4 + 3];
+      let best = 0, bd = Infinity;
+      for (let p = 0; p < count; p++) {
+        const dr = r - palette[p * 4], dg = g - palette[p * 4 + 1], db = b - palette[p * 4 + 2], da = a - palette[p * 4 + 3];
+        const d = dr * dr + dg * dg + db * db + 2 * da * da;
+        if (d < bd) { bd = d; best = p; }
+      }
+      const o = best * 5;
+      acc[o] += r; acc[o + 1] += g; acc[o + 2] += b; acc[o + 3] += a; acc[o + 4]++;
+    }
+    for (let p = 0; p < count; p++) {
+      const o = p * 5;
+      if (acc[o + 4] > 0) {
+        palette[p * 4] = Math.round(acc[o] / acc[o + 4]);
+        palette[p * 4 + 1] = Math.round(acc[o + 1] / acc[o + 4]);
+        palette[p * 4 + 2] = Math.round(acc[o + 2] / acc[o + 4]);
+        palette[p * 4 + 3] = Math.round(acc[o + 3] / acc[o + 4]);
+      }
+    }
+  }
+  return palette;
+}
+
 // One dither pass over rows yStart..yEnd, Floyd-Steinberg, chunkable: the
 // state carries the diffused error between calls so a phone can yield
 // between slices. Nearest-palette lookups go through a coarse cache; the

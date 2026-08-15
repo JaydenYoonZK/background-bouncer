@@ -9,8 +9,8 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
-  subjectPresence, encodePng, pngColorChunks, buildPalette, makeDitherState, ditherRows,
-} from "./cutout-core.js?v=2.17.0";
+  subjectPresence, encodePng, pngColorChunks, buildPalette, refinePalette, makeDitherState, ditherRows,
+} from "./cutout-core.js?v=2.18.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -324,7 +324,7 @@ async function refineOnSubject(source, session, S, matteModel, width, height, wo
   const cw = x1 - x0, ch = y1 - y0;
   if (cw < 64 || ch < 64) return false;
 
-  const patch = await runModel(session, drawRegion(source, x0, y0, cw, ch, S, S), S);
+  const patch = await steadyReads(session, drawRegion(source, x0, y0, cw, ch, S, S), S);
   // Place the close-up matte where it was measured from, at working scale.
   const px = Math.round(x0 * work.w / width), py = Math.round(y0 * work.h / height);
   const pw = Math.max(1, Math.round(cw * work.w / width));
@@ -334,24 +334,23 @@ async function refineOnSubject(source, session, S, matteModel, width, height, wo
   return true;
 }
 
-// The model read twice: once as the photo is, once mirrored, the two mattes
-// averaged. The mirrored view is a second independent opinion from the same
-// network, and where the two disagree is exactly where the model was
-// guessing; averaging steadies those pixels. Graphics path only, where a
-// second pass costs a quarter second rather than another five.
-async function runModelSteady(session, source, S) {
-  const straight = await runModel(session, drawToCanvas(source, S, S).ctx, S);
+// The model read twice: once as the canvas is, once mirrored, the two
+// mattes averaged. The mirrored view is a second independent opinion from
+// the same network, and where the two disagree is exactly where the model
+// was guessing; averaging steadies those pixels. Graphics path only, where
+// a second read costs a quarter second rather than another five. Both the
+// whole-frame pass and the close-up second look go through here.
+async function steadyReads(session, ctx, S) {
+  const straight = await runModel(session, ctx, S);
   if (active.provider !== "webgpu") return straight;
   try {
-    const c = document.createElement("canvas");
-    c.width = c.height = S;
-    const ctx = c.getContext("2d", { willReadFrequently: true });
-    ctx.translate(S, 0);
-    ctx.scale(-1, 1);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(source, 0, 0, S, S);
-    const mirrored = await runModel(session, ctx, S);
+    const m = document.createElement("canvas");
+    m.width = m.height = S;
+    const mctx = m.getContext("2d", { willReadFrequently: true });
+    mctx.translate(S, 0);
+    mctx.scale(-1, 1);
+    mctx.drawImage(ctx.canvas, 0, 0);
+    const mirrored = await runModel(session, mctx, S);
     for (let y = 0; y < S; y++) {
       const row = y * S;
       for (let x = 0; x < S; x++) {
@@ -360,6 +359,10 @@ async function runModelSteady(session, source, S) {
     }
   } catch { /* one opinion is still a cutout */ }
   return straight;
+}
+
+async function runModelSteady(session, source, S) {
+  return steadyReads(session, drawToCanvas(source, S, S).ctx, S);
 }
 
 // source: ImageBitmap or canvas/img with natural dimensions attached.
@@ -529,9 +532,17 @@ export async function removeBackground(source, { width, height }, onProgress) {
   if (!compressed) {
     try {
       const data = outImage.data;
-      const palette = buildPalette(data, n, 256, Math.max(1, Math.floor(n / 200000)));
+      const sampleStep = Math.max(1, Math.floor(n / 200000));
+      let palette = buildPalette(data, n, 256, sampleStep);
+      // Lloyd rounds settle the palette onto the photo; with the gentler
+      // dither below that measures both smaller and truer than either
+      // change alone. The refinement is heavy, so it breathes between rounds.
+      for (let it = 0; it < 3; it++) {
+        palette = refinePalette(data, n, palette, 1, sampleStep * 2);
+        await new Promise((r) => setTimeout(r, 0));
+      }
       const indices = new Uint8Array(n);
-      const DITHER_STRENGTH = 0.7;
+      const DITHER_STRENGTH = 0.5;
       const st = makeDitherState(outW, palette, DITHER_STRENGTH);
       const DITHER_ROWS = 64;
       for (let y0 = 0; y0 < outH; y0 += DITHER_ROWS) {
