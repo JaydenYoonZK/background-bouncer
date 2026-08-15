@@ -489,6 +489,13 @@ export function blobRescue(rgba, matte, w, h) {
   for (let id = 0; id < blobs.length; id++) {
     const bl = blobs[id];
     if (!bl.touches || bl.size > maxBlob || bl.size < 12) continue;
+    // A crumb is a lump; a thin ribbon along the silhouette is a subject's
+    // own washed-out rim, the very pixels lighting steals the colour from,
+    // and it is never this pass's to take. Demand real thickness and a
+    // filled bounding box before a blob may even be judged.
+    const bw = bl.x1 - bl.x0 + 1, bh = bl.y1 - bl.y0 + 1;
+    if (Math.min(bw, bh) < 10) continue;
+    if (bl.size < 0.2 * bw * bh) continue;
     const x0 = Math.max(0, bl.x0 - REACH), y0 = Math.max(0, bl.y0 - REACH);
     const x1 = Math.min(w - 1, bl.x1 + REACH), y1 = Math.min(h - 1, bl.y1 + REACH);
     let br = 0, bg = 0, bb = 0, bc = 0, fr = 0, fg = 0, fb = 0, fc = 0;

@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.20.1] - 2026-08-15
+
+### Fixed
+
+- The region pass learned the difference between a crumb and a rim. On a wide misty photo, 2.20.0 could carve a thin strip off a sleeve's edge: lighting had washed that rim out until its colour matched the background, and colour was all the pass asked about. It now also demands the shape of a crumb, real thickness and a filled bounding box, before a blob may even be judged; a ribbon running along the silhouette is a subject's own washed-out edge and is never taken. Re-measured everywhere: the sleeve is untouched again to the pixel, and the wedged chunks between two people still come out.
+
 ## [2.20.0] - 2026-08-15
 
 ### Changed

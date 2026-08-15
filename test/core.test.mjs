@@ -532,10 +532,15 @@ test("blobRescue removes a wedged background chunk, keeps accessories and bulk",
   // clear-evidence rule must leave it alone
   for (let y = 40; y < 60; y++) for (let x = 82; x < 100; x++) put(x + 88, y + 45, RED, 0); // keep coords simple below
   for (let y = 95; y < 112; y++) for (let x = 170; x < 184; x++) put(x, y, RED, 1);
+  // a thin ribbon along the subject's silhouette, coloured like the
+  // background because lighting washed it out: a rim, not a crumb, and it
+  // must survive even though its colour alone would condemn it
+  for (let y = 70; y < 116; y++) for (let x = 100; x < 103; x++) put(x, y, RED, 1);
   const out = blobRescue(rgba, matte, w, h);
   assert.equal(out[50 * w + 108], 0, "the wedged background-coloured chunk is removed");
   assert.equal(out[100 * w + 176], 1, "the accessory unlike its own local background stays");
   assert.equal(out[50 * w + 50], 1, "the subject's bulk is never touched");
+  assert.equal(out[90 * w + 101], 1, "a washed-out rim along the silhouette is never taken");
 });
 
 test("subjectPresence reads how much of the frame the matte keeps", () => {
