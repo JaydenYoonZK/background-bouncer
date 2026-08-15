@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.20.7] - 2026-08-16
+
+### Fixed
+
+- The status-bar shield is pinned now, not stuck. Fast scrolling on an iPhone could still flash content above the menu: Safari can lag a sticky element's repositioning by a frame, uncovering the zone at exactly the wrong moment. A fixed element is pinned to the viewport by the compositor and cannot lag, so the shield rides fixed at the top edge with its strip hanging above the viewport, invisible inside the page on every browser.
+
 ## [2.20.6] - 2026-08-16
 
 ### Fixed
