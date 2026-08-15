@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.20.6] - 2026-08-16
+
+### Fixed
+
+- On an iPhone, scrolling could flash page content in the strip above the menu, under the clock and battery. The menu has long bled its own backdrop upward to cover that zone, but WebKit clips the children of anything wearing backdrop blur, so on the one platform with the glitch the cover was never drawn. The cover now lives outside the blurred bar, a zero-height sticky strip hanging its backdrop a full screen upward, with nothing for WebKit to clip. Every other browser renders exactly as before.
+
 ## [2.20.5] - 2026-08-15
 
 ### Changed
