@@ -1,6 +1,6 @@
 {
   "name": "background-bouncer",
-  "version": "2.20.11",
+  "version": "2.20.12",
   "description": "Remove the background from any photo, in your browser. The picture never leaves your device.",
   "type": "module",
   "scripts": {
