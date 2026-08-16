@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.21.0] - 2026-08-16
+
+### Added
+
+- You can now choose what the download contains: the whole photo at its own size, or the file trimmed right to the subject's edges. Both choices show their pixel dimensions before you commit, the trim is encoded only if you pick it, and every wisp of soft edge survives the trim because the box is measured on the finished cutout's own transparency. Trimmed files carry Subject in the name so the two are easy to tell apart.
+
 ## [2.20.12] - 2026-08-16
 
 ### Changed

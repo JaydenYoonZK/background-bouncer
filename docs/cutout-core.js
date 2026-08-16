@@ -547,6 +547,31 @@ export function subjectBounds(m, w, h, thresh = 0.5) {
   return x1 < 0 ? null : { x0, y0, x1, y1 };
 }
 
+// The box the visible pixels occupy in a finished RGBA cutout, or null for
+// a fully transparent image. Any alpha at all counts: a wisp of hair at
+// alpha 3 is still the subject, and cropping it away would shave the very
+// softness the matte worked for.
+export function alphaBounds(data, w, h) {
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    let first = -1, last = -1;
+    for (let x = 0; x < w; x++) {
+      if (data[(row + x) * 4 + 3] !== 0) {
+        if (first < 0) first = x;
+        last = x;
+      }
+    }
+    if (first >= 0) {
+      if (first < x0) x0 = first;
+      if (last > x1) x1 = last;
+      if (y < y0) y0 = y;
+      y1 = y;
+    }
+  }
+  return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+
 // Lay a second, sharper matte over the region it was measured from. Any edge
 // of that region sitting inside the frame fades across `feather` pixels, so
 // the close-up matte and the whole-frame one meet without a visible seam; an

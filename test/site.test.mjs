@@ -168,7 +168,7 @@ test("browsers without a WebP encoder get a compressed palette PNG", () => {
 test("the PNG is assembled with adaptive filtering, canvas as fallback", () => {
   assert.match(cutout, /encodePng\(/, "the custom encoder runs");
   assert.match(cutout, /pngColorChunks\(/, "the browser's colour profile is harvested");
-  assert.match(cutout, /encode\(outCanvas, "image\/png"\)/, "the canvas encoder remains the fallback");
+  assert.match(cutout, /encode\(cv, "image\/png"\)/, "the canvas encoder remains the fallback");
 });
 
 test("the box border reports the run: amber working, green done, red failed", () => {
@@ -206,7 +206,7 @@ test("while a cut runs the stage holds the photo with nothing to grab", () => {
 });
 
 test("the cutout is saved as WebP, with a PNG available on demand", () => {
-  assert.match(cutout, /encode\(outCanvas, "image\/webp", WEBP_QUALITY\)/, "the download is WebP");
+  assert.match(cutout, /encode\(cv, "image\/webp", WEBP_QUALITY\)/, "the download is WebP");
   assert.match(cutout, /asPng/, "the same pixels can still be had as a PNG");
   const q = +cutout.match(/const WEBP_QUALITY = ([\d.]+);/)[1];
   // Low enough to shrink the file, high enough that the loss stays invisible.
@@ -223,4 +223,16 @@ test("no development scaffolding is left in docs", () => {
   for (const f of ["docs/spike.html", "docs/spike2.html", "docs/memprobe.html", "docs/engine-test.html"]) {
     assert.ok(!existsSync(join(root, f)), `${f} should not ship`);
   }
+});
+
+test("the download size choice is wired end to end", () => {
+  assert.ok(index.includes('id="size-full"'), "whole-photo option in the markup");
+  assert.ok(index.includes('id="size-crop"'), "trimmed option in the markup");
+  assert.match(app, /st\.result\.cropped\(\)/, "the app asks the engine for the trimmed file");
+  assert.match(app, /Subject_JaydenART_Background_Bouncer\./, "the trimmed file is named as a subject cut");
+  assert.match(cutout, /alphaBounds\(/, "the engine measures the subject's box");
+  assert.match(cutout, /await encodeCutout\(outCanvas/, "the full frame flows through the shared chain");
+  assert.match(cutout, /await encodeCutout\(cv/, "the trim flows through the shared chain");
+  const core = read("docs/cutout-core.js");
+  assert.match(core, /export function alphaBounds/, "alphaBounds lives in the tested core");
 });

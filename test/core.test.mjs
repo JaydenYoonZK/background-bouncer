@@ -4,7 +4,7 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, boxBlur, guidedFilter,
   luminance, crispen, defringe, decontaminate, backgroundColor, refineSize, outputSize, applyAlpha,
   removeSmallIslands, subjectBounds, blendPatch, finishOutput, colorRescue, dropOrphanSoft,
-  resizePlaneF, localBackgroundMap, subjectPresence,
+  resizePlaneF, localBackgroundMap, subjectPresence, alphaBounds,
   crc32, pngChunk, pngColorChunks, pngFilterInto, encodePng,
   buildPalette, refinePalette, makeDitherState, ditherRows, blobRescue,
 } from "../docs/cutout-core.js";
@@ -641,4 +641,32 @@ test("luminance uses the Rec. 601 weights", () => {
 test("MODEL_SIZE matches the model's static input", () => {
   assert.equal(MODEL_SIZE, 384);
   assert.equal(MODEL_SIZE_GPU, 1024);
+});
+
+/* ---- alphaBounds ---- */
+
+test("alphaBounds finds the box the visible pixels occupy", () => {
+  const w = 6, h = 5;
+  const data = new Uint8ClampedArray(w * h * 4);
+  const put = (x, y, a) => { data[(y * w + x) * 4 + 3] = a; };
+  put(2, 1, 255);
+  put(4, 3, 3); // a wisp at alpha 3 still counts
+  assert.deepEqual(alphaBounds(data, w, h), { x: 2, y: 1, w: 3, h: 3 });
+});
+
+test("alphaBounds is null for a fully transparent image", () => {
+  assert.equal(alphaBounds(new Uint8ClampedArray(4 * 4 * 4), 4, 4), null);
+});
+
+test("alphaBounds spans the whole frame when the subject does", () => {
+  const w = 3, h = 2;
+  const data = new Uint8ClampedArray(w * h * 4).fill(255);
+  assert.deepEqual(alphaBounds(data, w, h), { x: 0, y: 0, w: 3, h: 2 });
+});
+
+test("alphaBounds hugs a single visible pixel", () => {
+  const w = 4, h = 4;
+  const data = new Uint8ClampedArray(w * h * 4);
+  data[(2 * w + 3) * 4 + 3] = 128;
+  assert.deepEqual(alphaBounds(data, w, h), { x: 3, y: 2, w: 1, h: 1 });
 });

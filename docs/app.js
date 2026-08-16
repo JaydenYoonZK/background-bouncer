@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.20.12";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.21.0";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -23,6 +23,9 @@ const progressLabel = $("progress-label");
 const stageStatus = $("stage-status");
 const stageStatusText = $("stage-status-text");
 const dlNote = $("dl-note");
+const sizeRow = $("size-row");
+const sizeFullBtn = $("size-full");
+const sizeCropBtn = $("size-crop");
 const toolCard = $("tool-card");
 
 function formatBytes(n) {
@@ -130,6 +133,61 @@ let afterUrl = null;
 let afterPreviewUrl = null;
 let resultBlob = null;
 let resultName = "JaydenART_Background_Bouncer.png";
+// The size choice: the whole frame, or the file trimmed to the subject's
+// own box. Everything the trim owns lives in one object made per result;
+// every async completion checks it is still THE object before touching the
+// screen, which is what makes a photo swap, a restart, or a back-forward
+// restore unable to mix two runs' files. The trimmed file is encoded the
+// first time it is picked and remembered.
+let cropState = null;
+let sizeMode = "full";
+let fullSizeText = "";
+let fullPngLabel = "";
+let fullDownloadLabel = "";
+let fullCompressed = null;
+let pngBusy = false;
+// Each PNG encode takes a job token; only the newest job may clear the busy
+// flag, so a stale encode ending cannot unlock a button a newer one holds.
+let pngJob = 0;
+
+function dropCroppedState() {
+  if (cropState) {
+    if (cropState.url) URL.revokeObjectURL(cropState.url);
+    if (cropState.pngUrl) URL.revokeObjectURL(cropState.pngUrl);
+  }
+  cropState = null;
+  sizeMode = "full";
+  fullSizeText = "";
+  fullPngLabel = "";
+  fullDownloadLabel = "";
+  fullCompressed = null;
+  pngBusy = false;
+  pngJob++;
+  sizeRow.hidden = true;
+  downloadBtn.setAttribute("data-tip-off", "Nothing to download yet");
+  sizeFullBtn.classList.add("is-active");
+  sizeFullBtn.setAttribute("aria-pressed", "true");
+  sizeCropBtn.classList.remove("is-active");
+  sizeCropBtn.setAttribute("aria-pressed", "false");
+}
+
+// A crop pick that never resolved must not leave the download dead under a
+// finished result: a reset while "Preparing\u2026" showed walks the screen
+// back to the whole photo, which is always downloadable. Done directly,
+// because setSizeMode rightly refuses to act for a run that is over.
+function recoverPreparing() {
+  if (sizeMode !== "crop" || !downloadBtn.disabled || !resultBlob) return;
+  sizeMode = "full";
+  sizeFullBtn.classList.add("is-active");
+  sizeFullBtn.setAttribute("aria-pressed", "true");
+  sizeCropBtn.classList.remove("is-active");
+  sizeCropBtn.setAttribute("aria-pressed", "false");
+  downloadBtn.disabled = false;
+  downloadBtn.textContent = fullDownloadLabel || "Download";
+  downloadBtn.setAttribute("data-tip-off", "Nothing to download yet");
+  resultSize.textContent = fullSizeText;
+  noteFor(fullCompressed);
+}
 // One run at a time: the engine has a single inference session and two runs
 // interleaving on it is never right. inflight closes when a run starts and
 // its finally always reopens it, whatever else happened. The one run that
@@ -228,6 +286,14 @@ async function processFile(file) {
     if (inflightSeq === seq) inflight = false;
     if (seq === runSeq) {
       alertMsg("info", "That image could not be read. It may be corrupted or in a format this browser cannot decode.");
+      // The failed drop bumped the sequence but the previous result keeps
+      // the screen: hand it the new sequence so nothing on it goes dead,
+      // retire a PNG offer whose encode can no longer report back, and
+      // walk a mid-prepare trim back to the whole photo.
+      if (cropState) cropState.seq = runSeq;
+      if (phonePngResult) phonePngResult.seq = runSeq;
+      if (pngBtn.disabled) pngBtn.hidden = true;
+      recoverPreparing();
     }
     return;
   }
@@ -296,17 +362,22 @@ async function processFile(file) {
     // The note names the pair the visitor actually has. With no WebP encoder
     // the compressed file is a palette PNG, and the wording follows; with no
     // compressed file at all the note stays out of the way.
-    if (result.compressed === "png8") {
-      dlNote.textContent = "The first file is a PNG compressed to 256 colours chosen for this photo, the same trade the well-known PNG shrinkers make. The lossless PNG next to it keeps every colour and is far larger.";
-      dlNote.hidden = false;
-    } else if (result.compressed === "webp") {
-      dlNote.textContent = "The WebP is the compressed file, usually a fraction of the photo you gave. The PNG is lossless for anything that insists on one, and a lossless photo is usually far larger than the compressed one.";
-      dlNote.hidden = false;
-    } else {
-      dlNote.hidden = true;
-    }
+    noteFor(result.compressed);
     resultSize.textContent = formatBytes(blob.size);
     resultStat.textContent = cutStat();
+    fullDownloadLabel = downloadBtn.textContent;
+    fullSizeText = resultSize.textContent;
+    fullCompressed = result.compressed;
+    // The trim is only an option when there is something to trim: a subject
+    // that already fills the frame would get the same file twice. Only then
+    // is the result pinned for the trim's sake at all.
+    const b = result.bounds;
+    if (b && (b.w < result.width || b.h < result.height)) {
+      cropState = { result, base, seq, url: null, name: "", bytes: 0, pngUrl: null, pngName: "", ready: false, preparing: false, compressed: null };
+      sizeFullBtn.textContent = "Whole photo \u00b7 " + result.width + "\u00d7" + result.height;
+      sizeCropBtn.textContent = "Just the subject \u00b7 " + b.w + "\u00d7" + b.h;
+      sizeRow.hidden = false;
+    }
     offerPng(result, base, seq);
     revealWipe();
     // Let the filled bar rest at 100% for a beat before it clears. The handle
@@ -387,6 +458,7 @@ function showIncoming() {
   if (pngUrl) { URL.revokeObjectURL(pngUrl); pngUrl = null; }
   phonePngResult = null;
   pngBtn.hidden = true;
+  dropCroppedState();
   downloadBtn.disabled = true;
   downloadBtn.textContent = "Download";
   resultSize.textContent = "";
@@ -424,8 +496,16 @@ function resetRunState() {
   sampleBtn.disabled = false;
   restartBtn.disabled = false;
   // A PNG still encoding when the sequence moved on resolves into silence;
-  // a button reading "PNG…" forever would be its own dead button.
+  // a button reading "PNG…" forever would be its own dead button. The same
+  // goes for a trim still preparing: the screen walks back to the whole
+  // photo, which is always downloadable.
   if (pngBtn.disabled) pngBtn.hidden = true;
+  // The result being kept on screen is still THE result: hand it the new
+  // sequence, so its size choice and its phone PNG keep working instead of
+  // silently refusing every tap for the rest of the visit.
+  if (cropState) cropState.seq = runSeq;
+  if (phonePngResult) phonePngResult.seq = runSeq;
+  recoverPreparing();
 }
 
 // Leaving the page mid-run and coming back through the back-forward cache
@@ -470,6 +550,7 @@ restartBtn.addEventListener("click", () => {
   if (afterUrl) { URL.revokeObjectURL(afterUrl); afterUrl = null; }
   if (afterPreviewUrl) { URL.revokeObjectURL(afterPreviewUrl); afterPreviewUrl = null; }
   phonePngResult = null;
+  dropCroppedState();
   resultBody.hidden = true;
   results.hidden = true;
   alerts.innerHTML = "";
@@ -486,8 +567,87 @@ restartBtn.addEventListener("click", () => {
 
 downloadBtn.addEventListener("click", () => {
   if (!resultBlob) return;
+  if (sizeMode === "crop") {
+    const st = cropState;
+    if (st && st.seq === runSeq && st.ready && st.url) save(st.url, st.name);
+    return;
+  }
   save(afterUrl, resultName);
 });
+
+// Picking a size is also the moment the trimmed file starts encoding, so
+// the wait, usually well under a second, happens on the pick rather than
+// on the download tap, and only for people who wanted the trim at all.
+// One subscription per encode: repeat picks while it runs change nothing.
+function setSizeMode(mode) {
+  const st = cropState;
+  if (mode === sizeMode || !st || st.seq !== runSeq) return;
+  sizeMode = mode;
+  const cropOn = mode === "crop";
+  sizeFullBtn.classList.toggle("is-active", !cropOn);
+  sizeFullBtn.setAttribute("aria-pressed", String(!cropOn));
+  sizeCropBtn.classList.toggle("is-active", cropOn);
+  sizeCropBtn.setAttribute("aria-pressed", String(cropOn));
+  if (!cropOn) {
+    downloadBtn.disabled = !resultBlob;
+    downloadBtn.textContent = fullDownloadLabel || "Download";
+    downloadBtn.setAttribute("data-tip-off", "Nothing to download yet");
+    resultSize.textContent = fullSizeText;
+    noteFor(fullCompressed);
+    if (!pngBusy) { pngBtn.textContent = fullPngLabel || "Lossless PNG"; pngBtn.disabled = false; }
+    return;
+  }
+  if (!pngBusy) { pngBtn.textContent = "Lossless PNG"; pngBtn.disabled = false; }
+  if (st.ready) {
+    applyCroppedLabels(st);
+    return;
+  }
+  downloadBtn.disabled = true;
+  downloadBtn.textContent = "Preparing\u2026";
+  downloadBtn.setAttribute("data-tip-off", "The trimmed file is being made");
+  if (st.preparing) return;
+  st.preparing = true;
+  st.result.cropped().then((c) => {
+    st.preparing = false;
+    if (st !== cropState) return;
+    st.url = URL.createObjectURL(c.blob);
+    st.name = (st.base ? st.base + "_" : "") + "Subject_JaydenART_Background_Bouncer." + (c.blob.type === "image/webp" ? "webp" : "png");
+    st.bytes = c.blob.size;
+    st.compressed = c.compressed;
+    st.ready = true;
+    if (st.seq === runSeq && sizeMode === "crop") applyCroppedLabels(st);
+  }).catch(() => {
+    st.preparing = false;
+    if (st !== cropState || st.seq !== runSeq) return;
+    alertMsg("info", "The trimmed file could not be made here. The whole photo still downloads.");
+    if (sizeMode === "crop") setSizeMode("full");
+  });
+}
+
+// The two honest sentences about the pair of files, keyed to whichever
+// file the screen is currently offering.
+function noteFor(compressed) {
+  if (compressed === "png8") {
+    dlNote.textContent = "The first file is a PNG compressed to 256 colours chosen for this photo, the same trade the well-known PNG shrinkers make. The lossless PNG next to it keeps every colour and is far larger.";
+    dlNote.hidden = false;
+  } else if (compressed === "webp") {
+    dlNote.textContent = "The WebP is the compressed file, usually a fraction of the photo you gave. The PNG is lossless for anything that insists on one, and a lossless photo is usually far larger than the compressed one.";
+    dlNote.hidden = false;
+  } else {
+    dlNote.hidden = true;
+  }
+}
+
+function applyCroppedLabels(st) {
+  downloadBtn.disabled = false;
+  downloadBtn.textContent = "Download " + (st.name.endsWith(".webp") ? "WebP" : "PNG");
+  downloadBtn.setAttribute("data-tip-off", "Nothing to download yet");
+  resultSize.textContent = formatBytes(st.bytes);
+  noteFor(st.compressed);
+}
+
+sizeFullBtn.addEventListener("click", () => setSizeMode("full"));
+sizeCropBtn.addEventListener("click", () => setSizeMode("crop"));
 
 // The line that earns the trust: how long the cut took and which chip did it.
 function cutStat() {
@@ -554,9 +714,12 @@ async function offerPng(result, base, seq) {
   if (onPhone()) {
     pngBtn.disabled = false;
     pngBtn.textContent = "Lossless PNG";
+    fullPngLabel = pngBtn.textContent;
     phonePngResult = { result, base, seq };
     return;
   }
+  pngBusy = true;
+  const job = ++pngJob;
   pngBtn.disabled = true;
   pngBtn.textContent = "PNG…";
   try {
@@ -569,26 +732,66 @@ async function offerPng(result, base, seq) {
     if (seq !== runSeq) return;
     pngUrl = URL.createObjectURL(png);
     pngName = (base ? base + "_" : "") + "JaydenART_Background_Bouncer.png";
+    pngBusy = false;
+    fullPngLabel = (result.compressed === "png8" ? "Lossless PNG · " : "PNG · ") + formatBytes(png.size);
     pngBtn.disabled = false;
-    pngBtn.textContent = (result.compressed === "png8" ? "Lossless PNG · " : "PNG · ") + formatBytes(png.size);
+    pngBtn.textContent = sizeMode === "full" ? fullPngLabel : "Lossless PNG";
     const times = png.size / result.blob.size;
     if (times >= 1.5) {
-      resultSize.textContent = formatBytes(result.blob.size)
+      fullSizeText = formatBytes(result.blob.size)
         + " · " + (times < 10 ? times.toFixed(1) : Math.round(times)) + "× smaller than PNG";
+      if (sizeMode === "full") resultSize.textContent = fullSizeText;
     }
   } catch {
     // Only the run that owns the screen may hide the button; a stale encode
     // failing must not take away the current result's PNG.
     if (seq === runSeq) pngBtn.hidden = true;
+  } finally {
+    if (job === pngJob) pngBusy = false;
   }
 }
 
 let phonePngResult = null;
 pngBtn.addEventListener("click", async () => {
+  // The trimmed lossless PNG is its own file, encoded the first time it is
+  // asked for, on any device: it is smaller work than the full frame's. A
+  // mode switched away mid-encode keeps the file for later but saves
+  // nothing and says nothing.
+  if (sizeMode === "crop") {
+    const st = cropState;
+    if (!st || st.seq !== runSeq) return;
+    if (st.pngUrl) { save(st.pngUrl, st.pngName); return; }
+    pngBusy = true;
+    const job = ++pngJob;
+    pngBtn.disabled = true;
+    pngBtn.textContent = "PNG\u2026";
+    try {
+      const c = await st.result.cropped();
+      const png = await c.asPng();
+      if (st !== cropState) return;
+      st.pngUrl = URL.createObjectURL(png);
+      st.pngName = (st.base ? st.base + "_" : "") + "Subject_JaydenART_Background_Bouncer.png";
+      if (st.seq !== runSeq) return;
+      pngBtn.disabled = false;
+      if (sizeMode === "crop") {
+        pngBtn.textContent = "Lossless PNG \u00b7 " + formatBytes(png.size);
+        save(st.pngUrl, st.pngName);
+      } else {
+        pngBtn.textContent = fullPngLabel || "Lossless PNG";
+      }
+    } catch {
+      if (st === cropState && st.seq === runSeq) { pngBtn.disabled = false; pngBtn.textContent = "Lossless PNG"; }
+    } finally {
+      if (job === pngJob) pngBusy = false;
+    }
+    return;
+  }
   if (pngUrl) { save(pngUrl, pngName); return; }
   // Phone path: the PNG is made now, on request.
   if (!phonePngResult || phonePngResult.seq !== runSeq) return;
   const { result, base, seq } = phonePngResult;
+  pngBusy = true;
+  const job = ++pngJob;
   pngBtn.disabled = true;
   pngBtn.textContent = "PNG…";
   try {
@@ -596,11 +799,20 @@ pngBtn.addEventListener("click", async () => {
     if (seq !== runSeq) return;
     pngUrl = URL.createObjectURL(png);
     pngName = (base ? base + "_" : "") + "JaydenART_Background_Bouncer.png";
+    fullPngLabel = "Lossless PNG · " + formatBytes(png.size);
     pngBtn.disabled = false;
-    pngBtn.textContent = "Lossless PNG · " + formatBytes(png.size);
-    save(pngUrl, pngName);
+    // A mode switched away mid-encode keeps the file for later but saves
+    // nothing: the tap asked for the file of a screen that is gone.
+    if (sizeMode === "full") {
+      pngBtn.textContent = fullPngLabel;
+      save(pngUrl, pngName);
+    } else {
+      pngBtn.textContent = "Lossless PNG";
+    }
   } catch {
     if (seq === runSeq) { pngBtn.disabled = false; pngBtn.textContent = "Lossless PNG"; }
+  } finally {
+    if (job === pngJob) pngBusy = false;
   }
 });
 

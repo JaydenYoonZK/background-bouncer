@@ -1671,6 +1671,11 @@ html[data-theme="light"] .card.dropping::after { background: rgba(246, 244, 238,
 
 /* Preview background chooser. */
 .preview-bg { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+/* The size row borrows the preview-background row's whole look: it is the
+   same kind of choice. The hidden guard matters because the row's flex
+   display would otherwise beat the hidden attribute. */
+.preview-bg[hidden] { display: none; }
+.size-row { margin-top: 2px; }
 .preview-bg-label { font-size: 0.85rem; font-weight: 600; color: var(--ink-mute); margin-right: 2px; }
 .bg-opt {
   font-size: 0.8rem; font-weight: 700; padding: 6px 13px; border-radius: 999px;

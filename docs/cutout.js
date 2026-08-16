@@ -9,9 +9,9 @@ import {
   MODEL_SIZE, MODEL_SIZE_GPU, normalizeImage, guidedFilter, removeSmallIslands,
   luminance, crispen, defringe, backgroundColor, refineSize, outputSize, finishOutput,
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
-  subjectPresence, encodePng, pngColorChunks, buildPalette, refinePalette, makeDitherState, ditherRows,
+  subjectPresence, encodePng, pngColorChunks, buildPalette, refinePalette, makeDitherState, ditherRows, alphaBounds,
   blobRescue,
-} from "./cutout-core.js?v=2.20.12";
+} from "./cutout-core.js?v=2.21.0";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
@@ -382,6 +382,137 @@ async function runModelSteady(session, source, S) {
 }
 
 // source: ImageBitmap or canvas/img with natural dimensions attached.
+// Every encoder the tool has, tried in order on one finished canvas: the
+// browser's WebP, the shipped libwebp, the palette PNG, and the on-demand
+// lossless PNG. The full frame and the trimmed frame are the same pixels at
+// different sizes, so they share this chain instead of each carrying one.
+async function encodeCutout(cv, cx, img, w, h, space) {
+  const count = w * h;
+  // The colour chunks the browser would write for this canvas, harvested
+  // from a one-pixel encode, so every custom-assembled file carries exactly
+  // the profile the canvas would have declared.
+  const harvestColorChunks = async () => {
+    const probe = document.createElement("canvas");
+    probe.width = probe.height = 1;
+    let probeCtx;
+    try { probeCtx = probe.getContext("2d", { colorSpace: space }); } catch { /* older browser */ }
+    if (!probeCtx) probeCtx = probe.getContext("2d");
+    probeCtx.drawImage(cv, 0, 0, 1, 1);
+    const tiny = await encode(probe, "image/png");
+    return pngColorChunks(new Uint8Array(await tiny.arrayBuffer()));
+  };
+  // WebP is the file the visitor gets where the browser can make one: exact
+  // alpha, a little colour precision the eye cannot find, a tenth the size
+  // of the lossless PNG. Where it cannot, Safari above all, the compressed
+  // file is a palette PNG instead: up to 256 colours chosen for this photo,
+  // the rounding hidden in dithering noise, which is the same trade the
+  // well-known PNG shrinking services make. Transparency survives both.
+  let blob = await encode(cv, "image/webp", WEBP_QUALITY);
+  let compressed = blob.type === "image/webp" ? "webp" : null;
+  // Test switches: "bouncer-png8" behaves exactly like a browser with no
+  // WebP encoder in its canvas; "bouncer-nowasm" additionally refuses the
+  // shipped encoder, so the palette fallback can be exercised too.
+  let png8Test = false, noWasmTest = false;
+  try {
+    png8Test = !!localStorage.getItem("bouncer-png8");
+    noWasmTest = !!localStorage.getItem("bouncer-nowasm");
+  } catch { /* storage may be blocked */ }
+  if (png8Test && compressed) {
+    blob = await encode(cv, "image/png");
+    compressed = null;
+  }
+  if (!compressed && !noWasmTest) {
+    // The canvas cannot make a WebP here, Safari above all, so the tool
+    // brings its own encoder: libwebp compiled to WebAssembly, 0.3 MB
+    // fetched once and cached, and an iPhone's download becomes the same
+    // WebP a desktop gets instead of a many-times-larger PNG. The pixels
+    // are read back in sRGB, which is what an untagged WebP is taken to be.
+    try {
+      let srgb;
+      try { srgb = cx.getImageData(0, 0, w, h, { colorSpace: "srgb" }); }
+      catch { srgb = cx.getImageData(0, 0, w, h); }
+      const enc = await loadWasmWebp();
+      const buf = enc.encode(srgb.data, w, h, {
+        // libwebp's WebPConfig defaults, with the tool's own quality.
+        quality: Math.round(WEBP_QUALITY * 100),
+        target_size: 0, target_PSNR: 0, method: 4, sns_strength: 50,
+        filter_strength: 60, filter_sharpness: 0, filter_type: 1,
+        partitions: 0, segments: 4, pass: 1, show_compressed: 0,
+        preprocessing: 0, autofilter: 0, partition_limit: 0,
+        alpha_compression: 1, alpha_filtering: 1, alpha_quality: 100,
+        lossless: 0, exact: 0, image_hint: 0, emulate_jpeg_size: 0,
+        thread_level: 0, low_memory: 0, near_lossless: 100,
+        use_delta_palette: 0, use_sharp_yuv: 0,
+      });
+      if (buf) {
+        const wasmWebp = new Blob([buf], { type: "image/webp" });
+        if (wasmWebp.size < blob.size * 0.8) {
+          blob = wasmWebp;
+          compressed = "webp";
+        }
+      }
+    } catch { /* the palette PNG below still compresses */ }
+  }
+  if (!compressed) {
+    try {
+      const data = img.data;
+      const sampleStep = Math.max(1, Math.floor(count / 200000));
+      let palette = buildPalette(data, count, 256, sampleStep);
+      // Lloyd rounds settle the palette onto the photo; with the gentler
+      // dither below that measures both smaller and truer than either
+      // change alone. The refinement is heavy, so it breathes between rounds.
+      for (let it = 0; it < 3; it++) {
+        palette = refinePalette(data, count, palette, 1, sampleStep * 2);
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      const indices = new Uint8Array(count);
+      const DITHER_STRENGTH = 0.5;
+      const st = makeDitherState(w, palette, DITHER_STRENGTH);
+      const DITHER_ROWS = 64;
+      for (let y0 = 0; y0 < h; y0 += DITHER_ROWS) {
+        ditherRows(data, w, y0, Math.min(h, y0 + DITHER_ROWS), indices, st);
+        if (y0 + DITHER_ROWS < h) await new Promise((r) => setTimeout(r, 0));
+      }
+      const bytes = await encodePng(indices, w, h, {
+        colorChunks: await harvestColorChunks(),
+        yieldEvery: 256,
+        indexed: { palette },
+      });
+      const quantized = new Blob([bytes], { type: "image/png" });
+      // Only worth shipping if it genuinely is the compressed file.
+      if (quantized.size < blob.size * 0.8) {
+        blob = quantized;
+        compressed = "png8";
+      }
+    } catch { /* the lossless PNG stays the download */ }
+  }
+  // The lossless PNG is not made unless it is asked for, so nobody waits on
+  // an encode they will not use. When it is asked for, the file is assembled
+  // here with per-row adaptive filtering, which measures 12 to 17% smaller
+  // than the canvas encoder's output for the same lossless pixels. Anything
+  // failing falls back to the canvas encoder.
+  let pending = null;
+  const asPng = () => (pending ||= (async () => {
+    try {
+      // Read the pixels back only when the PNG is actually wanted: holding
+      // a full-resolution copy in the meantime is memory a phone cannot
+      // spare while its owner pinch-zooms the result. The canvas already
+      // stores hidden pixels premultiplied to black, so nothing to clear.
+      let px;
+      try { px = cx.getImageData(0, 0, w, h, { colorSpace: space }); }
+      catch { px = cx.getImageData(0, 0, w, h); }
+      const bytes = await encodePng(px.data, w, h, {
+        colorChunks: await harvestColorChunks(),
+        yieldEvery: 64,
+      });
+      return new Blob([bytes], { type: "image/png" });
+    } catch {
+      return encode(cv, "image/png");
+    }
+  })());
+  return { blob, asPng, compressed };
+}
+
 // Returns { blob, width, height, asPng } where blob is the transparent cutout
 // and asPng() encodes the same pixels as a PNG on demand.
 export async function removeBackground(source, { width, height }, onProgress) {
@@ -520,128 +651,10 @@ export async function removeBackground(source, { width, height }, onProgress) {
       if (end < n) await new Promise((r) => setTimeout(r, 0));
     }
   }
-  // The colour chunks the browser would write for this canvas, harvested
-  // from a one-pixel encode, so every custom-assembled file carries exactly
-  // the profile the canvas would have declared.
-  const harvestColorChunks = async () => {
-    const probe = document.createElement("canvas");
-    probe.width = probe.height = 1;
-    let probeCtx;
-    try { probeCtx = probe.getContext("2d", { colorSpace: space }); } catch { /* older browser */ }
-    if (!probeCtx) probeCtx = probe.getContext("2d");
-    probeCtx.drawImage(outCanvas, 0, 0, 1, 1);
-    const tiny = await encode(probe, "image/png");
-    return pngColorChunks(new Uint8Array(await tiny.arrayBuffer()));
-  };
-  // WebP is the file the visitor gets where the browser can make one: exact
-  // alpha, a little colour precision the eye cannot find, a tenth the size
-  // of the lossless PNG. Where it cannot, Safari above all, the compressed
-  // file is a palette PNG instead: up to 256 colours chosen for this photo,
-  // the rounding hidden in dithering noise, which is the same trade the
-  // well-known PNG shrinking services make. Transparency survives both.
-  let blob = await encode(outCanvas, "image/webp", WEBP_QUALITY);
-  let compressed = blob.type === "image/webp" ? "webp" : null;
-  // Test switches: "bouncer-png8" behaves exactly like a browser with no
-  // WebP encoder in its canvas; "bouncer-nowasm" additionally refuses the
-  // shipped encoder, so the palette fallback can be exercised too.
-  let png8Test = false, noWasmTest = false;
-  try {
-    png8Test = !!localStorage.getItem("bouncer-png8");
-    noWasmTest = !!localStorage.getItem("bouncer-nowasm");
-  } catch { /* storage may be blocked */ }
-  if (png8Test && compressed) {
-    blob = await encode(outCanvas, "image/png");
-    compressed = null;
-  }
-  if (!compressed && !noWasmTest) {
-    // The canvas cannot make a WebP here, Safari above all, so the tool
-    // brings its own encoder: libwebp compiled to WebAssembly, 0.3 MB
-    // fetched once and cached, and an iPhone's download becomes the same
-    // WebP a desktop gets instead of a many-times-larger PNG. The pixels
-    // are read back in sRGB, which is what an untagged WebP is taken to be.
-    try {
-      let srgb;
-      try { srgb = outCtx.getImageData(0, 0, outW, outH, { colorSpace: "srgb" }); }
-      catch { srgb = outCtx.getImageData(0, 0, outW, outH); }
-      const enc = await loadWasmWebp();
-      const buf = enc.encode(srgb.data, outW, outH, {
-        // libwebp's WebPConfig defaults, with the tool's own quality.
-        quality: Math.round(WEBP_QUALITY * 100),
-        target_size: 0, target_PSNR: 0, method: 4, sns_strength: 50,
-        filter_strength: 60, filter_sharpness: 0, filter_type: 1,
-        partitions: 0, segments: 4, pass: 1, show_compressed: 0,
-        preprocessing: 0, autofilter: 0, partition_limit: 0,
-        alpha_compression: 1, alpha_filtering: 1, alpha_quality: 100,
-        lossless: 0, exact: 0, image_hint: 0, emulate_jpeg_size: 0,
-        thread_level: 0, low_memory: 0, near_lossless: 100,
-        use_delta_palette: 0, use_sharp_yuv: 0,
-      });
-      if (buf) {
-        const wasmWebp = new Blob([buf], { type: "image/webp" });
-        if (wasmWebp.size < blob.size * 0.8) {
-          blob = wasmWebp;
-          compressed = "webp";
-        }
-      }
-    } catch { /* the palette PNG below still compresses */ }
-  }
-  if (!compressed) {
-    try {
-      const data = outImage.data;
-      const sampleStep = Math.max(1, Math.floor(n / 200000));
-      let palette = buildPalette(data, n, 256, sampleStep);
-      // Lloyd rounds settle the palette onto the photo; with the gentler
-      // dither below that measures both smaller and truer than either
-      // change alone. The refinement is heavy, so it breathes between rounds.
-      for (let it = 0; it < 3; it++) {
-        palette = refinePalette(data, n, palette, 1, sampleStep * 2);
-        await new Promise((r) => setTimeout(r, 0));
-      }
-      const indices = new Uint8Array(n);
-      const DITHER_STRENGTH = 0.5;
-      const st = makeDitherState(outW, palette, DITHER_STRENGTH);
-      const DITHER_ROWS = 64;
-      for (let y0 = 0; y0 < outH; y0 += DITHER_ROWS) {
-        ditherRows(data, outW, y0, Math.min(outH, y0 + DITHER_ROWS), indices, st);
-        if (y0 + DITHER_ROWS < outH) await new Promise((r) => setTimeout(r, 0));
-      }
-      const bytes = await encodePng(indices, outW, outH, {
-        colorChunks: await harvestColorChunks(),
-        yieldEvery: 256,
-        indexed: { palette },
-      });
-      const quantized = new Blob([bytes], { type: "image/png" });
-      // Only worth shipping if it genuinely is the compressed file.
-      if (quantized.size < blob.size * 0.8) {
-        blob = quantized;
-        compressed = "png8";
-      }
-    } catch { /* the lossless PNG stays the download */ }
-  }
-  // The lossless PNG is not made unless it is asked for, so nobody waits on
-  // an encode they will not use. When it is asked for, the file is assembled
-  // here with per-row adaptive filtering, which measures 12 to 17% smaller
-  // than the canvas encoder's output for the same lossless pixels. Anything
-  // failing falls back to the canvas encoder.
-  let pending = null;
-  const asPng = () => (pending ||= (async () => {
-    try {
-      // Read the pixels back only when the PNG is actually wanted: holding
-      // a full-resolution copy in the meantime is memory a phone cannot
-      // spare while its owner pinch-zooms the result. The canvas already
-      // stores hidden pixels premultiplied to black, so nothing to clear.
-      let px;
-      try { px = outCtx.getImageData(0, 0, outW, outH, { colorSpace: space }); }
-      catch { px = outCtx.getImageData(0, 0, outW, outH); }
-      const bytes = await encodePng(px.data, outW, outH, {
-        colorChunks: await harvestColorChunks(),
-        yieldEvery: 64,
-      });
-      return new Blob([bytes], { type: "image/png" });
-    } catch {
-      return encode(outCanvas, "image/png");
-    }
-  })());
+  // Where the subject actually is, measured on the finished alpha, so the
+  // trimmed download knows its frame before anyone asks for it.
+  const bounds = alphaBounds(outImage.data, outW, outH);
+  const enc = await encodeCutout(outCanvas, outCtx, outImage, outW, outH, space);
   onProgress?.("encode", 1);
   // A phone's memory ceiling is the whole game there: once the result is
   // out the inference session's heap is the biggest thing still standing,
@@ -652,7 +665,26 @@ export async function removeBackground(source, { width, height }, onProgress) {
     clearTimeout(idleReleaseTimer);
     idleReleaseTimer = setTimeout(releaseSessionIdle, 30000);
   }
-  return { blob, width: outW, height: outH, asPng, compressed };
+  // The trimmed file is only made if someone picks it: a canvas crop of the
+  // finished cutout, pushed through the same encoder chain, remembered so a
+  // second tap is free. drawImage rides the premultiplied canvas exactly like
+  // the wasm WebP path does, so its edge rounding is nothing new.
+  let croppedPending = null;
+  const cropped = () => (croppedPending ||= (async () => {
+    const b = bounds || { x: 0, y: 0, w: outW, h: outH };
+    const cv = document.createElement("canvas");
+    cv.width = b.w;
+    cv.height = b.h;
+    let cx;
+    try { cx = cv.getContext("2d", { colorSpace: space }); } catch { /* older browser */ }
+    if (!cx) cx = cv.getContext("2d");
+    cx.drawImage(outCanvas, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+    let img;
+    try { img = cx.getImageData(0, 0, b.w, b.h, { colorSpace: space }); } catch { img = cx.getImageData(0, 0, b.w, b.h); }
+    const e = await encodeCutout(cv, cx, img, b.w, b.h, space);
+    return { blob: e.blob, width: b.w, height: b.h, asPng: e.asPng, compressed: e.compressed };
+  })().catch((e) => { croppedPending = null; throw e; }));
+  return { blob: enc.blob, width: outW, height: outH, asPng: enc.asPng, compressed: enc.compressed, bounds, cropped };
 }
 
 let idleReleaseTimer = 0;
