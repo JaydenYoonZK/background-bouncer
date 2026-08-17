@@ -23,15 +23,15 @@
   <meta name="twitter:title" content="Background Bouncer: photo backgrounds gone, privately">
   <meta name="twitter:description" content="A transparent cutout from any photo, made entirely in your browser. Nothing is uploaded, ever.">
   <meta name="twitter:image" content="https://jaydenyoonzk.github.io/background-bouncer/assets/social-preview.png">
-  <script src="theme-boot.js?v=2.21.0"></script>
-  <link rel="stylesheet" href="styles.css?v=2.21.0">
+  <script src="theme-boot.js?v=2.21.1"></script>
+  <link rel="stylesheet" href="styles.css?v=2.21.1">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Background Bouncer",
     "applicationCategory": "MultimediaApplication",
-    "softwareVersion": "2.21.0",
+    "softwareVersion": "2.21.1",
     "operatingSystem": "Any (browser-based)",
     "url": "https://jaydenyoonzk.github.io/background-bouncer/",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -213,27 +213,32 @@
           <span class="compare-badge badge-after">After</span>
           <span class="stage-status" id="stage-status" aria-hidden="true" hidden><span class="stage-spinner"></span><span id="stage-status-text">Processing…</span></span>
         </div>
-        <div class="preview-bg" role="group" aria-label="Preview background">
+        <div class="preview-bg opt-row" role="group" aria-label="Preview background">
           <span class="preview-bg-label">Preview on</span>
-          <button type="button" class="bg-opt is-active" data-bg="checker" aria-pressed="true">Checkerboard</button>
-          <button type="button" class="bg-opt" data-bg="#ffffff" aria-pressed="false">White</button>
-          <button type="button" class="bg-opt" data-bg="#0d0c0a" aria-pressed="false">Black</button>
-          <label class="bg-opt bg-custom" role="button" tabindex="0" aria-pressed="false"><span>Custom</span><input type="color" id="bg-custom" value="#3a6ff7" aria-label="Custom preview background color" aria-haspopup="dialog"></label>
+          <div class="opt-chips">
+            <button type="button" class="bg-opt is-active" data-bg="checker" aria-pressed="true">Checkerboard</button>
+            <button type="button" class="bg-opt" data-bg="#ffffff" aria-pressed="false">White</button>
+            <button type="button" class="bg-opt" data-bg="#0d0c0a" aria-pressed="false">Black</button>
+            <label class="bg-opt bg-custom" role="button" tabindex="0" aria-pressed="false"><span>Custom</span><input type="color" id="bg-custom" value="#3a6ff7" aria-label="Custom preview background color" aria-haspopup="dialog"></label>
+          </div>
         </div>
       </div>
-      <div class="preview-bg size-row" role="group" aria-label="Download size" id="size-row" hidden>
-        <span class="preview-bg-label">Download</span>
-        <button type="button" class="bg-opt size-opt is-active" id="size-full" aria-pressed="true" data-tip="The whole frame at the photo's own size">Whole photo</button>
-        <button type="button" class="bg-opt size-opt" id="size-crop" aria-pressed="false" data-tip="Trimmed to the subject's edges, nothing else">Just the subject</button>
+      <div class="preview-bg opt-row size-row" role="group" aria-label="Download size" id="size-row" hidden>
+        <span class="preview-bg-label">Size</span>
+        <div class="size-seg">
+          <button type="button" class="bg-opt size-opt is-active" id="size-full" aria-pressed="true" data-tip="The whole frame at the photo's own size"><span class="seg-name">Whole photo</span><span class="seg-dims" id="size-full-dims"></span></button>
+          <button type="button" class="bg-opt size-opt" id="size-crop" aria-pressed="false" data-tip="Trimmed to the subject's edges, nothing else"><span class="seg-name">Just the subject</span><span class="seg-dims" id="size-crop-dims"></span></button>
+        </div>
       </div>
       <div class="toolbar output-actions">
         <button id="download" class="primary" type="button" disabled data-tip="Save the cutout, transparent and small enough to send" data-tip-off="Nothing to download yet">Download</button>
         <button id="download-png" type="button" hidden data-tip="Same cutout as a PNG: much larger, accepted anywhere">PNG</button>
-        <button id="restart" type="button" aria-label="Start over with another photo" data-tip="Clear this photo and pick another">Another photo</button>
-        <span class="charcount" id="result-size"></span>
-        <span class="charcount" id="result-stat"></span>
       </div>
+      <p class="dl-meta"><span id="result-size"></span><span id="result-stat"></span></p>
       <p class="dl-note" id="dl-note" hidden>The WebP is the compressed file, usually a fraction of the photo you gave. The PNG is lossless for anything that insists on one, and a lossless photo is usually far larger than the compressed one.</p>
+      <div class="restart-row">
+        <button id="restart" type="button" aria-label="Start over with another photo" data-tip="Clear this photo and pick another">Another photo</button>
+      </div>
     </div>
   </div>
 
@@ -302,7 +307,7 @@
       </div>
       <div class="legal">
         <p>Copyright © <a href="https://www.JaydenYoonZK.com" target="_blank" rel="noopener">Jayden Yoon ZK</a> 2026. All Rights Reserved.</p>
-        <p class="legal-version"><a href="https://github.com/JaydenYoonZK/background-bouncer/blob/main/CHANGELOG.md" target="_blank" rel="noopener">v2.21.0</a></p>
+        <p class="legal-version"><a href="https://github.com/JaydenYoonZK/background-bouncer/blob/main/CHANGELOG.md" target="_blank" rel="noopener">v2.21.1</a></p>
       </div>
     </div>
   </footer>
@@ -312,6 +317,6 @@
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
 </button>
 
-<script type="module" src="app.js?v=2.21.0"></script>
+<script type="module" src="app.js?v=2.21.1"></script>
 </body>
 </html>

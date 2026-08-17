@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.21.1] - 2026-08-16
+
+### Changed
+
+- The controls under the result were piling up into a ragged heap on phones, so the area now reads top to bottom in one order: preview background, then the size choice as a proper two-half selector with its pixel dimensions on a quiet second line, then the download buttons, then a single line for the file size and cut time, and Another photo on its own at the end. Same controls, none of the mess.
+
 ## [2.21.0] - 2026-08-16
 
 ### Added

@@ -1670,13 +1670,29 @@ html[data-theme="light"] .card.dropping::after { background: rgba(246, 244, 238,
 .color-hint { margin: 0 0 4px; color: var(--ink-mute); font-size: 0.85rem; }
 
 /* Preview background chooser. */
-.preview-bg { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
-/* The size row borrows the preview-background row's whole look: it is the
-   same kind of choice. The hidden guard matters because the row's flex
-   display would otherwise beat the hidden attribute. */
+/* The two option rows share one quiet grammar: a fixed label column and a
+   chip column. Chips that wrap land back on the chip column's left edge,
+   never under the label, which is what keeps a narrow phone tidy. */
+.preview-bg { display: grid; grid-template-columns: max-content 1fr; column-gap: 14px; align-items: start; margin-top: 14px; }
 .preview-bg[hidden] { display: none; }
-.size-row { margin-top: 2px; }
-.preview-bg-label { font-size: 0.85rem; font-weight: 600; color: var(--ink-mute); margin-right: 2px; }
+.opt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.size-row { margin-top: 10px; }
+/* The size choice is a segmented pair: two equal halves, name above its
+   own pixel dimensions, one of them lit. Equal widths are what make the
+   row read as one control rather than two stray chips. */
+.size-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 430px; }
+.size-seg .bg-opt { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 10px; }
+.seg-name { font-size: 0.8rem; font-weight: 700; }
+.seg-dims { font-size: 0.72rem; font-weight: 600; color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+.seg-dims:empty { display: none; }
+/* One home for the numbers: file size, the honest PNG comparison, and the
+   cut time, in a single quiet line under the actions. */
+.dl-meta { margin: 10px 0 0; font-size: 0.85rem; color: var(--ink-mute); display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.dl-meta span:empty { display: none; }
+.dl-meta span:not(:empty) + span:not(:empty)::before { content: "\00b7"; margin-right: 8px; }
+.dl-meta:not(:has(span:not(:empty))) { display: none; }
+.restart-row { margin-top: 16px; }
+.preview-bg-label { font-size: 0.85rem; font-weight: 600; color: var(--ink-mute); line-height: 29px; }
 .bg-opt {
   font-size: 0.8rem; font-weight: 700; padding: 6px 13px; border-radius: 999px;
   border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink-soft); cursor: pointer;

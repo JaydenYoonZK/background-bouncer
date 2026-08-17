@@ -1,5 +1,5 @@
 /*! Background Bouncer | Copyright (c) 2026 Jayden Yoon ZK | MIT License | https://github.com/JaydenYoonZK/background-bouncer */
-import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.21.0";
+import { removeBackground, prefetchModel, activeProvider, onPhone } from "./cutout.js?v=2.21.1";
 
 const $ = (id) => document.getElementById(id);
 const results = $("results");
@@ -26,6 +26,8 @@ const dlNote = $("dl-note");
 const sizeRow = $("size-row");
 const sizeFullBtn = $("size-full");
 const sizeCropBtn = $("size-crop");
+const sizeFullDims = $("size-full-dims");
+const sizeCropDims = $("size-crop-dims");
 const toolCard = $("tool-card");
 
 function formatBytes(n) {
@@ -164,6 +166,8 @@ function dropCroppedState() {
   pngBusy = false;
   pngJob++;
   sizeRow.hidden = true;
+  sizeFullDims.textContent = "";
+  sizeCropDims.textContent = "";
   downloadBtn.setAttribute("data-tip-off", "Nothing to download yet");
   sizeFullBtn.classList.add("is-active");
   sizeFullBtn.setAttribute("aria-pressed", "true");
@@ -374,8 +378,8 @@ async function processFile(file) {
     const b = result.bounds;
     if (b && (b.w < result.width || b.h < result.height)) {
       cropState = { result, base, seq, url: null, name: "", bytes: 0, pngUrl: null, pngName: "", ready: false, preparing: false, compressed: null };
-      sizeFullBtn.textContent = "Whole photo \u00b7 " + result.width + "\u00d7" + result.height;
-      sizeCropBtn.textContent = "Just the subject \u00b7 " + b.w + "\u00d7" + b.h;
+      sizeFullDims.textContent = result.width + "\u00d7" + result.height;
+      sizeCropDims.textContent = b.w + "\u00d7" + b.h;
       sizeRow.hidden = false;
     }
     offerPng(result, base, seq);

@@ -11,7 +11,7 @@ import {
   subjectBounds, blendPatch, colorRescue, dropOrphanSoft, resizePlaneF, localBackgroundMap,
   subjectPresence, encodePng, pngColorChunks, buildPalette, refinePalette, makeDitherState, ditherRows, alphaBounds,
   blobRescue,
-} from "./cutout-core.js?v=2.21.0";
+} from "./cutout-core.js?v=2.21.1";
 
 // Two engines, and a visitor only ever downloads one of them.
 //
